@@ -2,5 +2,18 @@
 *.tfstate
 *.tfstate.*
 crash.log
+crash.*.log
 *.tfvars
 *.tfvars.json
+*.tfplan
+.terraform.tfstate.lock.info
+
+# Local Terraform CLI configuration may contain credentials.
+.terraformrc
+terraform.rc
+
+# Local override files are intentionally not source controlled.
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
