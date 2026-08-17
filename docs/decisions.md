@@ -28,23 +28,26 @@ The workload account hosts one application, App1, with three isolated environmen
 - Resource names and tags identify the application and environment.
 - Terraform provider dependency lock files are committed. Terraform working directories, state, local plans, CLI configuration, and variable files are excluded from Git.
 
-## Current VPC scope
+## Network foundation
 
-The initial VPC module creates only:
+- All environments are IPv4-only and use explicit subnet CIDRs and Availability Zones in their environment root modules.
+- Public subnets have an Internet Gateway route and are reserved for edge resources. Application workloads remain in private application subnets.
+- Dev spans `us-east-1a` and `us-east-1b`. It has two public and two private application subnets and no NAT gateway. Its private workloads have no default internet route.
+- Test and Prod use the same topology across `us-east-1a`, `us-east-1b`, and `us-east-1c`: three public, three private application, and three isolated private database subnets.
+- Test and Prod each use one NAT gateway, placed in the first public subnet (`us-east-1a`), for private application subnet egress. This is a deliberate cost tradeoff and creates an Availability Zone dependency for outbound traffic.
+- Private database route tables have no direct internet or NAT route.
+- Each subnet group shares one route table within an environment. The module manages explicit route table associations.
 
-- One VPC with a configurable IPv4 CIDR block
-- Configurable DNS support and DNS hostnames, enabled by each environment
-- A consistent `Name` tag plus caller-supplied common tags
-- Outputs for the VPC ID and CIDR
+| Environment | Public CIDRs | Private application CIDRs | Private database CIDRs |
+| --- | --- | --- | --- |
+| Dev | `10.10.0.0/24`, `10.10.1.0/24` | `10.10.10.0/24`, `10.10.11.0/24` | None |
+| Test | `10.20.0.0/24`, `10.20.1.0/24`, `10.20.2.0/24` | `10.20.10.0/24`, `10.20.11.0/24`, `10.20.12.0/24` | `10.20.20.0/24`, `10.20.21.0/24`, `10.20.22.0/24` |
+| Prod | `10.30.0.0/24`, `10.30.1.0/24`, `10.30.2.0/24` | `10.30.10.0/24`, `10.30.11.0/24`, `10.30.12.0/24` | `10.30.20.0/24`, `10.30.21.0/24`, `10.30.22.0/24` |
 
 ## Deliberately unresolved decisions
 
 The following choices require explicit design work in later tasks and are not encoded yet:
 
-- Availability Zone count and selection
-- Public, private, database, or intra-subnet layout and CIDR allocation
-- Internet gateway and routing design
-- NAT gateway count, placement, and Dev cost tradeoffs
 - VPC endpoints and egress controls
 - EKS topology, node capacity, and cluster access
 - Remote Terraform state backend and state isolation details

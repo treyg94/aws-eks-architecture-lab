@@ -4,15 +4,15 @@ This repository is an incremental, production-shaped AWS architecture lab built 
 
 ## Current state
 
-The current implementation provides a reusable VPC module and separate Terraform root modules for the App1 Dev, Test, and Prod environments. Each environment currently creates only a VPC with DNS support, DNS hostnames, consistent naming, and common tags.
+The current implementation provides a reusable VPC network module and separate Terraform root modules for the App1 Dev, Test, and Prod environments. The module creates VPCs, subnets, an Internet Gateway, route tables, and optional single-NAT egress for private application subnets.
 
-| Environment | VPC CIDR | Intent |
+| Environment | VPC CIDR | Topology |
 | --- | --- | --- |
-| Dev | `10.10.0.0/16` | Lower-cost, flexible lab environment with deliberate reductions in redundancy and controls where appropriate |
-| Test | `10.20.0.0/16` | Mirrors Prod as closely as practical for validation |
-| Prod | `10.30.0.0/16` | Production-shaped security and resiliency |
+| Dev | `10.10.0.0/16` | Two AZs; public and private application subnets; no NAT gateway |
+| Test | `10.20.0.0/16` | Three AZs; public, private application, and isolated private database subnets; one NAT gateway |
+| Prod | `10.30.0.0/16` | Same three-AZ topology as Test; one NAT gateway |
 
-Subnet, Availability Zone, routing, and NAT gateway design remain intentionally undecided and are not implemented yet.
+Public subnets are reserved for edge resources. Workloads remain private, and private database subnets have no direct internet route. The single-NAT design in Test and Prod is a documented cost-versus-resiliency tradeoff.
 
 ## Target architecture
 
