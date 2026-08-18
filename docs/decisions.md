@@ -73,3 +73,12 @@ The following choices require explicit design work in later tasks and are not en
 1. Test EKS access and Kubernetes RBAC with cluster administrators, namespace-scoped developers, and read-only identities.
 2. Cut over one environment from default EKS encryption to a customer-managed KMS key and document the operational behavior.
 3. Temporarily scale Dev from one to two nodes to test scheduling and node or Availability Zone failure behavior.
+
+## Application Load Balancer foundation
+
+- Test and Prod each have one internet-facing Application Load Balancer spanning every public subnet in the environment. Dev does not create an ALB.
+- The reusable ALB module creates an IP target group. The initial environment input uses HTTP port 80 and the root health-check path; both remain configurable.
+- The ALB security group accepts public TCP 80 and 443. Egress is limited to the configured application target port within the environment VPC CIDR.
+- Until an ACM certificate ARN is supplied, the HTTP listener forwards to the target group. Supplying a certificate ARN creates the HTTPS listener and changes HTTP behavior to a permanent HTTPS redirect.
+- ACM certificates, Route 53 records, AWS Load Balancer Controller, target registration, and Kubernetes resources are intentionally deferred.
+- Planned DNS names are `dev.tsconsultingllc.com`, `test.tsconsultingllc.com`, and `prod.tsconsultingllc.com`. These names are documentation-only; the Dev name does not imply a current Dev ALB.

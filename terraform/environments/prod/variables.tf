@@ -73,3 +73,14 @@ variable "fargate_profiles" {
   default = []
 
 }
+
+variable "alb" {
+  description = "Environment-specific Application Load Balancer configuration."
+  type = object({
+    name              = string
+    target_port       = number
+    health_check_path = string
+    certificate_arn   = string
+    ssl_policy        = string
+  })
+}
