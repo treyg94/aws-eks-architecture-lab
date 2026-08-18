@@ -31,7 +31,7 @@ The workload account hosts one application, App1, with three isolated environmen
 ## Network foundation
 
 - All environments are IPv4-only and use explicit subnet CIDRs and Availability Zones in their environment root modules.
-- Public subnets have an Internet Gateway route and are reserved for edge resources. Application workloads remain in private application subnets.
+- Public subnets have an Internet Gateway route and are normally reserved for edge resources. Test and Prod application workloads remain in private application subnets; Dev managed nodes are a deliberate lab exception recorded in the EKS foundation decision.
 - Dev spans `us-east-1a` and `us-east-1b`. It has two public and two private application subnets and no NAT gateway. Its private workloads have no default internet route.
 - Test and Prod use the same topology across `us-east-1a`, `us-east-1b`, and `us-east-1c`: three public, three private application, and three isolated private database subnets.
 - Test and Prod each use one NAT gateway, placed in the first public subnet (`us-east-1a`), for private application subnet egress. This is a deliberate cost tradeoff and creates an Availability Zone dependency for outbound traffic.
@@ -52,3 +52,24 @@ The following choices require explicit design work in later tasks and are not en
 - EKS topology, node capacity, and cluster access
 - Remote Terraform state backend and state isolation details
 - Departmental service control policy contents
+
+## EKS foundation
+
+- EKS configuration is split into reusable cluster, managed-node, and Fargate modules. Environment-specific compute choices are committed as non-sensitive Terraform input values.
+- Managed nodes and Fargate have independent boolean controls so either or both compute models can be enabled later.
+- Clusters use Kubernetes `1.36`, the latest Amazon EKS standard-support version when this decision was recorded.
+- Both public and private Kubernetes API endpoints are enabled. Public access is limited to `104.189.79.218/32`; private access supports nodes and Fargate Pods inside the VPC.
+- EKS uses its default encryption behavior. A customer-managed KMS key is intentionally deferred.
+- API, audit, authenticator, controller manager, and scheduler control-plane logs are enabled with three-day CloudWatch retention for lab cost control.
+- Terraform manages the VPC CNI, CoreDNS, and kube-proxy EKS add-ons.
+- The cluster, managed nodes, and Fargate Pods each have dedicated IAM roles.
+- The durable IAM principal behind the active Terraform session is derived from AWS identity context and receives cluster-admin access through an EKS Access Entry.
+- Dev uses a `t3.small` managed node group in public subnets with 30 GiB disks and `1/1/2` minimum, desired, and maximum capacity. Fargate is disabled.
+- Test uses a `t3.small` managed node group in private application subnets with 30 GiB disks and `1/2/2` capacity. Fargate is disabled.
+- Prod is Fargate-only. `app-fargate` selects namespace `app` with `infrastructure=fargate`. `coredns-fargate` selects CoreDNS Pods in `kube-system` with `k8s-app=kube-dns`, and the CoreDNS add-on uses Fargate compute.
+
+## Future scenarios
+
+1. Test EKS access and Kubernetes RBAC with cluster administrators, namespace-scoped developers, and read-only identities.
+2. Cut over one environment from default EKS encryption to a customer-managed KMS key and document the operational behavior.
+3. Temporarily scale Dev from one to two nodes to test scheduling and node or Availability Zone failure behavior.
