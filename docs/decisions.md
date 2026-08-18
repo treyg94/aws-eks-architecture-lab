@@ -60,7 +60,7 @@ The following choices require explicit design work in later tasks and are not en
 - Clusters use Kubernetes `1.36`, the latest Amazon EKS standard-support version when this decision was recorded.
 - Both public and private Kubernetes API endpoints are enabled. Public access is limited to `104.189.79.218/32`; private access supports nodes and Fargate Pods inside the VPC.
 - EKS uses its default encryption behavior. A customer-managed KMS key is intentionally deferred.
-- API, audit, authenticator, controller manager, and scheduler control-plane logs are enabled with two-day CloudWatch retention for lab cost control.
+- API, audit, authenticator, controller manager, and scheduler control-plane logs are enabled with three-day CloudWatch retention for lab cost control.
 - Terraform manages the VPC CNI, CoreDNS, and kube-proxy EKS add-ons.
 - The cluster, managed nodes, and Fargate Pods each have dedicated IAM roles.
 - The durable IAM principal behind the active Terraform session is derived from AWS identity context and receives cluster-admin access through an EKS Access Entry.

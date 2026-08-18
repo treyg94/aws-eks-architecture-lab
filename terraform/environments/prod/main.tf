@@ -79,7 +79,7 @@ module "eks_cluster" {
   public_access_cidrs = var.cluster_public_access_cidrs
 
   operator_principal_arn = data.aws_iam_session_context.operator.issuer_arn
-  log_retention_days     = 2
+  log_retention_days     = 3
   coredns_compute_type   = var.enable_fargate && !var.enable_managed_nodes ? "Fargate" : null
 
   tags = local.eks_tags

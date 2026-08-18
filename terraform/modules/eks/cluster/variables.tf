@@ -31,7 +31,7 @@ variable "operator_principal_arn" {
 variable "log_retention_days" {
   description = "CloudWatch retention period for EKS control-plane logs."
   type        = number
-  default     = 2
+  default     = 3
 }
 
 variable "coredns_compute_type" {

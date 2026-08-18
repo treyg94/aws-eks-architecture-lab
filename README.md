@@ -14,7 +14,7 @@ The current implementation provides a reusable VPC network module and separate T
 
 Public subnets are normally reserved for edge resources. Test and Prod workloads remain private, and private database subnets have no direct internet route. Dev managed nodes are a deliberate lab exception and run in its public subnets. The single-NAT design in Test and Prod is a documented cost-versus-resiliency tradeoff.
 
-The EKS foundation uses Kubernetes `1.36`, enables public and private API endpoints, restricts the public endpoint to the documented operator CIDR, retains all control-plane logs for two days, and manages the VPC CNI, CoreDNS, and kube-proxy add-ons. The active Terraform caller's durable IAM principal receives cluster-admin access through an EKS Access Entry.
+The EKS foundation uses Kubernetes `1.36`, enables public and private API endpoints, restricts the public endpoint to the documented operator CIDR, retains all control-plane logs for three days, and manages the VPC CNI, CoreDNS, and kube-proxy add-ons. The active Terraform caller's durable IAM principal receives cluster-admin access through an EKS Access Entry.
 
 | Environment | EKS compute |
 | --- | --- |
