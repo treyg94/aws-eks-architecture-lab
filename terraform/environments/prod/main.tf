@@ -127,3 +127,31 @@ output "private_db_subnet_ids" {
   description = "IDs of the Prod private database subnets, keyed by Availability Zone."
   value       = module.vpc.private_db_subnet_ids
 }
+
+module "alb" {
+  source = "../../modules/alb"
+
+  name              = var.alb.name
+  vpc_id            = module.vpc.vpc_id
+  public_subnet_ids = values(module.vpc.public_subnet_ids)
+
+  target_port        = var.alb.target_port
+  target_cidr_blocks = [module.vpc.vpc_cidr_block]
+  health_check_path  = var.alb.health_check_path
+  certificate_arn    = var.alb.certificate_arn
+  ssl_policy         = var.alb.ssl_policy
+
+  tags = {
+    Application = "App1"
+  }
+}
+
+output "alb_dns_name" {
+  description = "AWS-assigned DNS name of the Prod Application Load Balancer."
+  value       = module.alb.dns_name
+}
+
+output "alb_target_group_arn" {
+  description = "ARN of the Prod ALB IP target group."
+  value       = module.alb.target_group_arn
+}

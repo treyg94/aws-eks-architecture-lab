@@ -14,3 +14,11 @@ managed_nodes = {
   desired_size    = 2
   max_size        = 2
 }
+
+alb = {
+  name              = "app1-test-alb"
+  target_port       = 80
+  health_check_path = "/"
+  certificate_arn   = null
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+}

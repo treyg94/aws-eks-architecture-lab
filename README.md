@@ -22,11 +22,19 @@ The EKS foundation uses Kubernetes `1.36`, enables public and private API endpoi
 | Test | Two `t3.small` managed nodes by default, scaling between one and two, in private application subnets |
 | Prod | Fargate-only: an application profile and a dedicated CoreDNS profile in private application subnets |
 
+Test and Prod each include one internet-facing Application Load Balancer spanning all environment public subnets. Each ALB forwards HTTP to an IP target group on the environment-configured application port. HTTPS configuration is supported but remains disabled until an ACM certificate ARN is supplied; when enabled, HTTP changes to a permanent HTTPS redirect. Dev does not create an ALB.
+
+Planned application DNS names are documentation-only and are not created by Terraform yet:
+
+- `dev.tsconsultingllc.com`
+- `test.tsconsultingllc.com`
+- `prod.tsconsultingllc.com`
+
 ## Target architecture
 
 The AWS Organizations management account is `treyslab`. A separate workload account normally resides in the `App1` organizational unit and contains all three application environments. The workload account may temporarily move among the `Finance`, `HR`, `Legal`, and `IT` OUs for future service control policy exercises.
 
-Future iterations may add subnets, EKS, data services, ingress, monitoring, and autoscaling. These components are outside the current implementation.
+Future iterations may add data services, Kubernetes ingress integration, DNS records, certificates, monitoring, and autoscaling. These components are outside the current implementation.
 
 ## Repository structure
 
@@ -34,6 +42,7 @@ Future iterations may add subnets, EKS, data services, ingress, monitoring, and 
 terraform/
 |-- modules/
 |   |-- vpc/
+|   |-- alb/
 |   `-- eks/
 |       |-- cluster/
 |       |-- managed-nodes/

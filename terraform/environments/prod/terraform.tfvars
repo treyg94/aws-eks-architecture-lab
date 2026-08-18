@@ -29,3 +29,11 @@ fargate_profiles = [
     ]
   }
 ]
+
+alb = {
+  name              = "app1-prod-alb"
+  target_port       = 80
+  health_check_path = "/"
+  certificate_arn   = null
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+}
