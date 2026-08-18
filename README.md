@@ -12,7 +12,15 @@ The current implementation provides a reusable VPC network module and separate T
 | Test | `10.20.0.0/16` | Three AZs; public, private application, and isolated private database subnets; one NAT gateway |
 | Prod | `10.30.0.0/16` | Same three-AZ topology as Test; one NAT gateway |
 
-Public subnets are reserved for edge resources. Workloads remain private, and private database subnets have no direct internet route. The single-NAT design in Test and Prod is a documented cost-versus-resiliency tradeoff.
+Public subnets are normally reserved for edge resources. Test and Prod workloads remain private, and private database subnets have no direct internet route. Dev managed nodes are a deliberate lab exception and run in its public subnets. The single-NAT design in Test and Prod is a documented cost-versus-resiliency tradeoff.
+
+The EKS foundation uses Kubernetes `1.36`, enables public and private API endpoints, restricts the public endpoint to the documented operator CIDR, retains all control-plane logs for two days, and manages the VPC CNI, CoreDNS, and kube-proxy add-ons. The active Terraform caller's durable IAM principal receives cluster-admin access through an EKS Access Entry.
+
+| Environment | EKS compute |
+| --- | --- |
+| Dev | One `t3.small` managed node by default, scaling to two, in public subnets |
+| Test | Two `t3.small` managed nodes by default, scaling between one and two, in private application subnets |
+| Prod | Fargate-only: an application profile and a dedicated CoreDNS profile in private application subnets |
 
 ## Target architecture
 
@@ -25,14 +33,18 @@ Future iterations may add subnets, EKS, data services, ingress, monitoring, and 
 ```text
 terraform/
 |-- modules/
-|   `-- vpc/
+|   |-- vpc/
+|   `-- eks/
+|       |-- cluster/
+|       |-- managed-nodes/
+|       `-- fargate/
 `-- environments/
     |-- dev/
     |-- test/
     `-- prod/
 ```
 
-Each directory under `terraform/environments` is an independent Terraform root module. Run Terraform commands from the environment you intend to inspect or deploy.
+Each directory under `terraform/environments` is an independent Terraform root module. Its committed `terraform.tfvars` contains non-sensitive environment architecture inputs. Run Terraform commands from the environment you intend to inspect or deploy.
 
 ## Safety
 
