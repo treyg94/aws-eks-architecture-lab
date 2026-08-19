@@ -79,6 +79,15 @@ The following choices require explicit design work in later tasks and are not en
 - Test and Prod each have one internet-facing Application Load Balancer spanning every public subnet in the environment. Dev does not create an ALB.
 - The reusable ALB module creates an IP target group. The initial environment input uses HTTP port 80 and the root health-check path; both remain configurable.
 - The ALB security group accepts public TCP 80 and 443. Egress is limited to the configured application target port within the environment VPC CIDR.
-- Until an ACM certificate ARN is supplied, the HTTP listener forwards to the target group. Supplying a certificate ARN creates the HTTPS listener and changes HTTP behavior to a permanent HTTPS redirect.
-- ACM certificates, Route 53 records, AWS Load Balancer Controller, target registration, and Kubernetes resources are intentionally deferred.
-- Planned DNS names are `dev.tsconsultingllc.com`, `test.tsconsultingllc.com`, and `prod.tsconsultingllc.com`. These names are documentation-only; the Dev name does not imply a current Dev ALB.
+- Test and Prod use HTTPS listeners with the shared wildcard ACM certificate and permanently redirect HTTP to HTTPS.
+- AWS Load Balancer Controller, target registration, and Kubernetes resources remain intentionally deferred.
+
+## Shared DNS and ACM foundation
+
+- Shared infrastructure is organized as service-specific Terraform roots under `terraform/environments/shared`. The first root is `shared/dns-acm`; future shared services should use peers such as `shared/cloudwatch`, rather than a flat shared root.
+- `shared/dns-acm` looks up the existing public `tsconsultingllc.com` Route 53 hosted zone. Terraform does not create or own the hosted zone.
+- The shared root owns one Amazon-issued `*.tsconsultingllc.com` ACM certificate, its Route 53 DNS validation records, and certificate validation.
+- Test and Prod do not own certificates. Each environment looks up the issued wildcard certificate by domain and status before configuring its ALB HTTPS listener.
+- Test owns the `test.tsconsultingllc.com` Route 53 alias to its ALB. Prod owns the `prod.tsconsultingllc.com` alias to its ALB.
+- `dev.tsconsultingllc.com` remains reserved in documentation only; no Dev ALB or DNS record is created.
+- The shared DNS/ACM root must be applied before Test or Prod because their certificate lookups require an issued certificate.
