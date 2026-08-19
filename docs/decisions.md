@@ -50,7 +50,6 @@ The following choices require explicit design work in later tasks and are not en
 
 - VPC endpoints and egress controls
 - EKS topology, node capacity, and cluster access
-- Remote Terraform state backend and state isolation details
 - Departmental service control policy contents
 
 ## EKS foundation
@@ -91,3 +90,15 @@ The following choices require explicit design work in later tasks and are not en
 - Test owns the `test.tsconsultingllc.com` Route 53 alias to its ALB. Prod owns the `prod.tsconsultingllc.com` alias to its ALB.
 - `dev.tsconsultingllc.com` remains reserved in documentation only; no Dev ALB or DNS record is created.
 - The shared DNS/ACM root must be applied before Test or Prod because their certificate lookups require an issued certificate.
+
+## Terraform state backend foundation
+
+- Backend infrastructure lives in `terraform/bootstrap/state-backend`, separate from `terraform/environments/shared`. Bootstrap infrastructure must exist before environment and shared-service roots can use it, so treating it as an ordinary shared service would create a dependency cycle.
+- The bootstrap root intentionally keeps local Terraform state and does not configure itself to use the S3 bucket it creates. Its local state must be stored securely and backed up by the operator.
+- The bootstrap root creates one S3 state bucket and one customer-managed KMS key with a friendly alias. The bucket name combines a configurable project prefix with the current AWS account ID and region without committing an account identifier.
+- Bucket versioning is enabled, all four S3 Block Public Access controls are enabled, default encryption uses the customer-managed KMS key, and the bucket policy denies requests that do not use TLS.
+- The bucket and KMS key use Terraform `prevent_destroy`; the bucket does not allow force deletion. KMS rotation is enabled and its deletion window is 30 days.
+- After a later explicit migration, the S3 bucket will become the authoritative state location for Dev, Test, Prod, and shared infrastructure.
+- Planned state keys are `shared/dns-acm/terraform.tfstate`, `dev/terraform.tfstate`, `test/terraform.tfstate`, and `prod/terraform.tfstate`.
+- Migrated roots will use S3 native state locking with `use_lockfile = true`. No DynamoDB locking table is created or planned.
+- This feature does not migrate state or add backend blocks to any existing Terraform root.
