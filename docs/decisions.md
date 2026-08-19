@@ -102,3 +102,21 @@ The following choices require explicit design work in later tasks and are not en
 - Planned state keys are `shared/dns-acm/terraform.tfstate`, `dev/terraform.tfstate`, `test/terraform.tfstate`, and `prod/terraform.tfstate`.
 - Migrated roots will use S3 native state locking with `use_lockfile = true`. No DynamoDB locking table is created or planned.
 - This feature does not migrate state or add backend blocks to any existing Terraform root.
+
+### Required pre-deployment step
+
+The remote-state backend is fully defined in `terraform/bootstrap/state-backend`, but it must **not** be applied during the infrastructure design phase. No AWS resources should be created solely to support Terraform state while the lab is still being designed.
+
+Immediately before the first real lab deployment, complete these steps in order:
+
+1. Apply `terraform/bootstrap/state-backend` while that bootstrap root continues using local state.
+2. Configure the Dev, Test, Prod, and shared Terraform roots to use the S3 remote backend.
+3. Assign each root its separate state key:
+   - Dev: `dev/terraform.tfstate`
+   - Test: `test/terraform.tfstate`
+   - Prod: `prod/terraform.tfstate`
+   - Shared DNS/ACM: `shared/dns-acm/terraform.tfstate`
+4. Enable S3 native state locking with `use_lockfile = true`.
+5. Reinitialize each Terraform root before its first apply.
+
+This sequence is a required pre-deployment prerequisite, not work to perform now.
