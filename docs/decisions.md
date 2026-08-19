@@ -102,3 +102,12 @@ The following choices require explicit design work in later tasks and are not en
 - Planned state keys are `shared/dns-acm/terraform.tfstate`, `dev/terraform.tfstate`, `test/terraform.tfstate`, and `prod/terraform.tfstate`.
 - Migrated roots will use S3 native state locking with `use_lockfile = true`. No DynamoDB locking table is created or planned.
 - This feature does not migrate state or add backend blocks to any existing Terraform root.
+
+## Shared ECR foundation
+
+- ECR is shared infrastructure owned by the service-specific `terraform/environments/shared/ecr` root, not by Dev, Test, or Prod.
+- One configurable repository stores the main App1 application container image for use across the lab environments.
+- Image tags are immutable so an existing tag cannot silently be moved to different image content. Scan-on-push is enabled to identify image vulnerabilities when images enter the repository.
+- A dedicated customer-managed KMS key with rotation enabled and a friendly alias encrypts repository content.
+- Configurable lifecycle rules remove untagged images after seven days and cap total retained image history at 20 images by default. These lab-friendly defaults limit stale storage while preserving recent images for testing and rollback exercises.
+- Application image builds and pushes are intentionally deferred until the EKS workload is configured. This foundation does not create workloads, Kubernetes resources, or delivery pipelines.

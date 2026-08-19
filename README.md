@@ -31,6 +31,8 @@ The grouped `shared/dns-acm` Terraform root looks up the existing public `tscons
 
 `dev.tsconsultingllc.com` remains reserved in documentation only.
 
+The grouped `shared/ecr` Terraform root owns one ECR repository for the main App1 container image. The repository uses immutable image tags, scan-on-push, and a dedicated customer-managed KMS key. Configurable lifecycle rules remove untagged images after seven days and retain no more than 20 images by default. Building and pushing an application image is deferred until the EKS workload layer is configured.
+
 The `terraform/bootstrap/state-backend` root defines the future remote-state foundation: a versioned, private S3 bucket encrypted by a customer-managed KMS key. It is intentionally separate from environment and shared-service roots because those roots will depend on the backend it creates. The bootstrap root continues to use local state and must be preserved securely.
 
 ## Target architecture
@@ -50,6 +52,7 @@ terraform/
 |   |-- alb/
 |   |-- dns-acm/
 |   |-- dns-alias/
+|   |-- ecr/
 |   `-- eks/
 |       |-- cluster/
 |       |-- managed-nodes/
@@ -59,10 +62,11 @@ terraform/
     |-- test/
     |-- prod/
     `-- shared/
-        `-- dns-acm/
+        |-- dns-acm/
+        `-- ecr/
 ```
 
-Each leaf directory under `terraform/environments` is an independent Terraform root module. Shared infrastructure is grouped by service under `terraform/environments/shared`, such as `shared/dns-acm` and a future `shared/cloudwatch`. Each root's committed `terraform.tfvars` contains non-sensitive architecture inputs.
+Each leaf directory under `terraform/environments` is an independent Terraform root module. Shared infrastructure is grouped by service under `terraform/environments/shared`, including `shared/dns-acm` and `shared/ecr`, with future services using peers such as `shared/cloudwatch`. Each root's committed `terraform.tfvars` contains non-sensitive architecture inputs.
 
 Apply the `shared/dns-acm` root before Test or Prod so their certificate data lookup can find the issued wildcard certificate. Run Terraform commands only from the root you intend to inspect or deploy.
 
