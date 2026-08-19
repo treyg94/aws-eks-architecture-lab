@@ -31,6 +31,8 @@ The grouped `shared/dns-acm` Terraform root looks up the existing public `tscons
 
 `dev.tsconsultingllc.com` remains reserved in documentation only.
 
+The `terraform/bootstrap/state-backend` root defines the future remote-state foundation: a versioned, private S3 bucket encrypted by a customer-managed KMS key. It is intentionally separate from environment and shared-service roots because those roots will depend on the backend it creates. The bootstrap root continues to use local state and must be preserved securely.
+
 ## Target architecture
 
 The AWS Organizations management account is `treyslab`. A separate workload account normally resides in the `App1` organizational unit and contains all three application environments. The workload account may temporarily move among the `Finance`, `HR`, `Legal`, and `IT` OUs for future service control policy exercises.
@@ -41,6 +43,8 @@ Future iterations may add data services, Kubernetes ingress integration, monitor
 
 ```text
 terraform/
+|-- bootstrap/
+|   `-- state-backend/
 |-- modules/
 |   |-- vpc/
 |   |-- alb/
@@ -62,9 +66,37 @@ Each leaf directory under `terraform/environments` is an independent Terraform r
 
 Apply the `shared/dns-acm` root before Test or Prod so their certificate data lookup can find the issued wildcard certificate. Run Terraform commands only from the root you intend to inspect or deploy.
 
+## Future remote state
+
+This feature creates only the backend infrastructure definition; existing Terraform roots have not been migrated. After the bootstrap root is applied and its local state is secured, future backend configurations will use the bootstrap outputs with these keys:
+
+| Terraform root | S3 backend key |
+| --- | --- |
+| Shared DNS/ACM | `shared/dns-acm/terraform.tfstate` |
+| Dev | `dev/terraform.tfstate` |
+| Test | `test/terraform.tfstate` |
+| Prod | `prod/terraform.tfstate` |
+
+Each migrated root will use an S3 backend configuration shaped like:
+
+```hcl
+terraform {
+  backend "s3" {
+    bucket       = "<state_bucket_name>"
+    key          = "<root-specific-key>"
+    region       = "us-east-1"
+    encrypt      = true
+    kms_key_id   = "<kms_key_arn>"
+    use_lockfile = true
+  }
+}
+```
+
+S3 native lock files will provide state locking; no DynamoDB locking table is planned. The backend bucket enables versioning, blocks all public access, enforces TLS through a deny policy, and uses default SSE-KMS encryption with the dedicated customer-managed key.
+
 ## Safety
 
-Do not commit credentials, account-specific secrets, Terraform state, sensitive variable files, or private keys. Terraform provider lock files are intentionally committed for reproducible provider selection.
+Do not commit credentials, account-specific secrets, Terraform state, sensitive variable files, private keys, or the bootstrap root's local state. Terraform provider lock files are intentionally committed for reproducible provider selection.
 
 No AWS resources should be created from this repository without first reviewing the plan, expected costs, and the active AWS account and identity.
 

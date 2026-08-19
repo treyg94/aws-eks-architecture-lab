@@ -7,6 +7,7 @@ crash.*.log
 *.tfvars.json
 !terraform/environments/*/terraform.tfvars
 !terraform/environments/shared/*/terraform.tfvars
+!terraform/bootstrap/*/terraform.tfvars
 *.tfplan
 .terraform.tfstate.lock.info
 
