@@ -80,7 +80,15 @@ variable "alb" {
     name              = string
     target_port       = number
     health_check_path = string
-    certificate_arn   = string
     ssl_policy        = string
+  })
+}
+
+variable "dns" {
+  description = "Environment-specific DNS and shared certificate lookup configuration."
+  type = object({
+    hosted_zone_name   = string
+    record_name        = string
+    certificate_domain = string
   })
 }

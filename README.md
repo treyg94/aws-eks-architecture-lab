@@ -22,19 +22,20 @@ The EKS foundation uses Kubernetes `1.36`, enables public and private API endpoi
 | Test | Two `t3.small` managed nodes by default, scaling between one and two, in private application subnets |
 | Prod | Fargate-only: an application profile and a dedicated CoreDNS profile in private application subnets |
 
-Test and Prod each include one internet-facing Application Load Balancer spanning all environment public subnets. Each ALB forwards HTTP to an IP target group on the environment-configured application port. HTTPS configuration is supported but remains disabled until an ACM certificate ARN is supplied; when enabled, HTTP changes to a permanent HTTPS redirect. Dev does not create an ALB.
+Test and Prod each include one internet-facing Application Load Balancer spanning all environment public subnets. Each ALB exposes HTTPS using the shared wildcard ACM certificate, redirects HTTP to HTTPS, and forwards to an IP target group on port 80 with health checks at `/`. Dev does not create an ALB.
 
-Planned application DNS names are documentation-only and are not created by Terraform yet:
+The grouped `shared/dns-acm` Terraform root looks up the existing public `tsconsultingllc.com` hosted zone and owns one DNS-validated `*.tsconsultingllc.com` ACM certificate. Test and Prod discover that issued certificate and create Route 53 aliases for:
 
-- `dev.tsconsultingllc.com`
 - `test.tsconsultingllc.com`
 - `prod.tsconsultingllc.com`
+
+`dev.tsconsultingllc.com` remains reserved in documentation only.
 
 ## Target architecture
 
 The AWS Organizations management account is `treyslab`. A separate workload account normally resides in the `App1` organizational unit and contains all three application environments. The workload account may temporarily move among the `Finance`, `HR`, `Legal`, and `IT` OUs for future service control policy exercises.
 
-Future iterations may add data services, Kubernetes ingress integration, DNS records, certificates, monitoring, and autoscaling. These components are outside the current implementation.
+Future iterations may add data services, Kubernetes ingress integration, monitoring, and autoscaling. These components are outside the current implementation.
 
 ## Repository structure
 
@@ -43,6 +44,8 @@ terraform/
 |-- modules/
 |   |-- vpc/
 |   |-- alb/
+|   |-- dns-acm/
+|   |-- dns-alias/
 |   `-- eks/
 |       |-- cluster/
 |       |-- managed-nodes/
@@ -50,10 +53,14 @@ terraform/
 `-- environments/
     |-- dev/
     |-- test/
-    `-- prod/
+    |-- prod/
+    `-- shared/
+        `-- dns-acm/
 ```
 
-Each directory under `terraform/environments` is an independent Terraform root module. Its committed `terraform.tfvars` contains non-sensitive environment architecture inputs. Run Terraform commands from the environment you intend to inspect or deploy.
+Each leaf directory under `terraform/environments` is an independent Terraform root module. Shared infrastructure is grouped by service under `terraform/environments/shared`, such as `shared/dns-acm` and a future `shared/cloudwatch`. Each root's committed `terraform.tfvars` contains non-sensitive architecture inputs.
+
+Apply the `shared/dns-acm` root before Test or Prod so their certificate data lookup can find the issued wildcard certificate. Run Terraform commands only from the root you intend to inspect or deploy.
 
 ## Safety
 

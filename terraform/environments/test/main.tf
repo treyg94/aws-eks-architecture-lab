@@ -138,7 +138,7 @@ module "alb" {
   target_port        = var.alb.target_port
   target_cidr_blocks = [module.vpc.vpc_cidr_block]
   health_check_path  = var.alb.health_check_path
-  certificate_arn    = var.alb.certificate_arn
+  certificate_arn    = data.aws_acm_certificate.wildcard.arn
   ssl_policy         = var.alb.ssl_policy
 
   tags = {
@@ -154,4 +154,25 @@ output "alb_dns_name" {
 output "alb_target_group_arn" {
   description = "ARN of the Test ALB IP target group."
   value       = module.alb.target_group_arn
+}
+
+data "aws_acm_certificate" "wildcard" {
+  domain      = var.dns.certificate_domain
+  statuses    = ["ISSUED"]
+  types       = ["AMAZON_ISSUED"]
+  most_recent = true
+}
+
+module "dns_alias" {
+  source = "../../modules/dns-alias"
+
+  hosted_zone_name = var.dns.hosted_zone_name
+  record_name      = var.dns.record_name
+  alias_dns_name   = module.alb.dns_name
+  alias_zone_id    = module.alb.zone_id
+}
+
+output "application_dns_name" {
+  description = "Route 53 alias name for the Test application."
+  value       = module.dns_alias.fqdn
 }
