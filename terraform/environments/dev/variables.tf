@@ -99,3 +99,19 @@ variable "workload_identity" {
     error_message = "Workload identities must define exactly frontend and backend."
   }
 }
+
+variable "rds" {
+  description = "Environment-specific RDS PostgreSQL configuration."
+  type = object({
+    identifier              = string
+    engine_version          = string
+    instance_class          = string
+    storage_type            = string
+    allocated_storage       = number
+    master_username         = string
+    publicly_accessible     = bool
+    operator_access_cidrs   = list(string)
+    backup_retention_period = number
+    kms_alias_name          = string
+  })
+}

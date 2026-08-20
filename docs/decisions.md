@@ -121,3 +121,16 @@ The following choices require explicit design work in later tasks and are not en
 - A dedicated customer-managed KMS key with rotation enabled and a friendly alias encrypts repository content.
 - Configurable lifecycle rules remove untagged images after seven days and cap total retained image history at 20 images by default. These lab-friendly defaults limit stale storage while preserving recent images for testing and rollback exercises.
 - Application image builds and pushes are intentionally deferred until the EKS workload is configured. This foundation does not create workloads, Kubernetes resources, or delivery pipelines.
+
+## RDS PostgreSQL foundation
+
+- Dev, Test, and Prod each own an isolated standard RDS for PostgreSQL instance through their existing environment root; database infrastructure is not shared between environments.
+- PostgreSQL major version 17 is pinned while AWS-supported automatic minor version upgrades remain enabled. Each environment starts with a single `db.t4g.micro` instance, 30 GiB of gp3 storage, and Multi-AZ disabled to support later capacity and availability exercises.
+- Test and Prod RDS instances are not publicly accessible and use only their isolated private database subnets.
+- Dev is an intentional convenience exception for direct desktop administration and testing: its RDS instance uses the existing Dev public subnets and is publicly accessible, but PostgreSQL ingress is restricted to the existing operator `104.189.79.218/32` CIDR and the dedicated backend workload security group. Internet-wide ingress is prohibited.
+- Every environment receives a dedicated backend workload security group and an RDS security group. PostgreSQL TCP/5432 is allowed only from the backend group, plus the Dev-only operator CIDR. The backend group will be attached to backend compute during the later Kubernetes workload configuration phase; the frontend receives no database network path.
+- RDS manages the master password in Secrets Manager using the environment-specific RDS KMS key; Terraform does not generate, store, or expose the password. IAM database authentication is enabled for future backend application access.
+- No application IAM database policy is attached yet because the database user and final `rds-db:connect` resource scope will be defined during workload configuration. Broad RDS permissions and frontend database access are prohibited.
+- Each environment uses a separate rotating customer-managed KMS key and friendly alias for database storage and the RDS-managed master secret.
+- Automated backups are retained for one day. Deletion protection and Multi-AZ are disabled, but deletion requires a uniquely timestamped final snapshot whose identifier remains stable during the instance lifecycle.
+- Scenario 001 in `docs/scenarios.md` records the future production Multi-AZ change request and its engineering considerations; Multi-AZ is not implemented in this foundation.

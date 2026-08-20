@@ -152,3 +152,65 @@ output "backend_workload_role_arn" {
     module.eks_pod_identity[0].role_arns["backend"]
   ) : module.eks_irsa[0].role_arns["backend"]
 }
+
+module "rds" {
+  source = "../../modules/rds"
+
+  identifier              = var.rds.identifier
+  engine_version          = var.rds.engine_version
+  instance_class          = var.rds.instance_class
+  storage_type            = var.rds.storage_type
+  allocated_storage       = var.rds.allocated_storage
+  master_username         = var.rds.master_username
+  vpc_id                  = module.vpc.vpc_id
+  subnet_ids              = values(module.vpc.public_subnet_ids)
+  publicly_accessible     = var.rds.publicly_accessible
+  operator_access_cidrs   = var.rds.operator_access_cidrs
+  backup_retention_period = var.rds.backup_retention_period
+  kms_alias_name          = var.rds.kms_alias_name
+
+  tags = {
+    Application = "App1"
+    Component   = "Database"
+  }
+}
+
+output "rds_endpoint" {
+  description = "Connection endpoint of the Dev RDS instance."
+  value       = module.rds.endpoint
+}
+
+output "rds_port" {
+  description = "Connection port of the Dev RDS instance."
+  value       = module.rds.port
+}
+
+output "rds_instance_identifier" {
+  description = "Identifier of the Dev RDS instance."
+  value       = module.rds.db_instance_identifier
+}
+
+output "rds_instance_arn" {
+  description = "ARN of the Dev RDS instance."
+  value       = module.rds.db_instance_arn
+}
+
+output "rds_master_secret_arn" {
+  description = "ARN of the Dev RDS-managed master credential secret."
+  value       = module.rds.master_secret_arn
+}
+
+output "rds_kms_key_arn" {
+  description = "ARN of the Dev RDS KMS key."
+  value       = module.rds.kms_key_arn
+}
+
+output "backend_workload_security_group_id" {
+  description = "ID of the Dev backend workload security group."
+  value       = module.rds.backend_workload_security_group_id
+}
+
+output "rds_security_group_id" {
+  description = "ID of the Dev RDS security group."
+  value       = module.rds.rds_security_group_id
+}

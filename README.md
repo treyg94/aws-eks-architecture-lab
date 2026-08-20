@@ -18,6 +18,8 @@ The EKS foundation uses Kubernetes `1.36`, enables public and private API endpoi
 
 Application workload identity is split between `frontend` and `backend` service accounts in the `app` namespace, with a separate permission-free IAM role for each identity in every environment. Dev and Test use EKS Pod Identity and install its agent on their Linux EC2 worker nodes. Prod remains Fargate-only and uses IRSA because EKS Pod Identity does not support Fargate workloads. Application permissions will be added later as dependent AWS services are introduced.
 
+Each environment owns one small, single-instance RDS for PostgreSQL 17 database with 30 GiB of gp3 storage, IAM database authentication, an RDS-managed master password, and an environment-specific customer-managed KMS key. Test and Prod remain private in their isolated database subnets. Dev intentionally uses its public subnets and a publicly accessible endpoint restricted to the operator `/32` and the dedicated backend workload security group for direct desktop administration and testing. Multi-AZ is deferred to a documented lab scenario.
+
 | Environment | EKS compute |
 | --- | --- |
 | Dev | One `t3.small` managed node by default, scaling to two, in public subnets |
@@ -55,6 +57,7 @@ terraform/
 |   |-- dns-acm/
 |   |-- dns-alias/
 |   |-- ecr/
+|   |-- rds/
 |   `-- eks/
 |       |-- cluster/
 |       |-- irsa/
@@ -108,4 +111,4 @@ Do not commit credentials, account-specific secrets, Terraform state, sensitive 
 
 No AWS resources should be created from this repository without first reviewing the plan, expected costs, and the active AWS account and identity.
 
-See [docs/decisions.md](docs/decisions.md) for the architectural decisions and deliberately unresolved items.
+See [docs/decisions.md](docs/decisions.md) for architectural decisions and [docs/scenarios.md](docs/scenarios.md) for planned change exercises.

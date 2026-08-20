@@ -57,3 +57,16 @@ dns = {
   record_name        = "prod.tsconsultingllc.com"
   certificate_domain = "*.tsconsultingllc.com"
 }
+
+rds = {
+  identifier              = "app1-prod-postgres"
+  engine_version          = "17"
+  instance_class          = "db.t4g.micro"
+  storage_type            = "gp3"
+  allocated_storage       = 30
+  master_username         = "app1admin"
+  publicly_accessible     = false
+  operator_access_cidrs   = []
+  backup_retention_period = 1
+  kms_alias_name          = "app1-prod-rds"
+}

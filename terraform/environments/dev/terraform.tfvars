@@ -29,3 +29,16 @@ managed_nodes = {
   desired_size    = 1
   max_size        = 2
 }
+
+rds = {
+  identifier              = "app1-dev-postgres"
+  engine_version          = "17"
+  instance_class          = "db.t4g.micro"
+  storage_type            = "gp3"
+  allocated_storage       = 30
+  master_username         = "app1admin"
+  publicly_accessible     = true
+  operator_access_cidrs   = ["104.189.79.218/32"]
+  backup_retention_period = 1
+  kms_alias_name          = "app1-dev-rds"
+}
