@@ -45,6 +45,12 @@ variable "coredns_compute_type" {
   }
 }
 
+variable "enable_pod_identity_agent" {
+  description = "Whether to install the EKS Pod Identity Agent add-on."
+  type        = bool
+  default     = false
+}
+
 variable "tags" {
   description = "Tags applied to EKS and supporting AWS resources."
   type        = map(string)

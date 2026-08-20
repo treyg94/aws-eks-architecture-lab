@@ -16,6 +16,8 @@ Public subnets are normally reserved for edge resources. Test and Prod workloads
 
 The EKS foundation uses Kubernetes `1.36`, enables public and private API endpoints, restricts the public endpoint to the documented operator CIDR, retains all control-plane logs for three days, and manages the VPC CNI, CoreDNS, and kube-proxy add-ons. The active Terraform caller's durable IAM principal receives cluster-admin access through an EKS Access Entry.
 
+Application workload identity is split between `frontend` and `backend` service accounts in the `app` namespace, with a separate permission-free IAM role for each identity in every environment. Dev and Test use EKS Pod Identity and install its agent on their Linux EC2 worker nodes. Prod remains Fargate-only and uses IRSA because EKS Pod Identity does not support Fargate workloads. Application permissions will be added later as dependent AWS services are introduced.
+
 | Environment | EKS compute |
 | --- | --- |
 | Dev | One `t3.small` managed node by default, scaling to two, in public subnets |
@@ -55,8 +57,10 @@ terraform/
 |   |-- ecr/
 |   `-- eks/
 |       |-- cluster/
+|       |-- irsa/
 |       |-- managed-nodes/
-|       `-- fargate/
+|       |-- fargate/
+|       `-- pod-identity/
 `-- environments/
     |-- dev/
     |-- test/

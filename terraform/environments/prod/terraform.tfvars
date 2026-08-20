@@ -4,6 +4,21 @@ cluster_subnet_type         = "private_app"
 cluster_public_access_cidrs = ["104.189.79.218/32"]
 enable_managed_nodes        = false
 enable_fargate              = true
+workload_identity_mode      = "irsa"
+
+workload_identity = {
+  namespace = "app"
+  identities = {
+    frontend = {
+      service_account_name = "frontend"
+      role_name            = "app1-prod-frontend"
+    }
+    backend = {
+      service_account_name = "backend"
+      role_name            = "app1-prod-backend"
+    }
+  }
+}
 
 fargate_profiles = [
   {
