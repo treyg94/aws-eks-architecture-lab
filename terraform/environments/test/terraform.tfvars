@@ -4,6 +4,21 @@ cluster_subnet_type         = "private_app"
 cluster_public_access_cidrs = ["104.189.79.218/32"]
 enable_managed_nodes        = true
 enable_fargate              = false
+workload_identity_mode      = "pod_identity"
+
+workload_identity = {
+  namespace = "app"
+  identities = {
+    frontend = {
+      service_account_name = "frontend"
+      role_name            = "app1-test-frontend"
+    }
+    backend = {
+      service_account_name = "backend"
+      role_name            = "app1-test-backend"
+    }
+  }
+}
 
 managed_nodes = {
   node_group_name = "app1-test-managed"

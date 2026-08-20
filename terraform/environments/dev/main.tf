@@ -70,9 +70,10 @@ module "eks_cluster" {
   subnet_ids          = local.eks_subnet_ids[var.cluster_subnet_type]
   public_access_cidrs = var.cluster_public_access_cidrs
 
-  operator_principal_arn = data.aws_iam_session_context.operator.issuer_arn
-  log_retention_days     = 3
-  coredns_compute_type   = var.enable_fargate && !var.enable_managed_nodes ? "Fargate" : null
+  operator_principal_arn    = data.aws_iam_session_context.operator.issuer_arn
+  log_retention_days        = 3
+  coredns_compute_type      = var.enable_fargate && !var.enable_managed_nodes ? "Fargate" : null
+  enable_pod_identity_agent = var.workload_identity_mode == "pod_identity"
 
   tags = local.eks_tags
 }
@@ -104,6 +105,30 @@ module "eks_fargate" {
   tags = local.eks_tags
 }
 
+module "eks_pod_identity" {
+  count  = var.workload_identity_mode == "pod_identity" ? 1 : 0
+  source = "../../modules/eks/pod-identity"
+
+  cluster_name = module.eks_cluster.cluster_name
+  namespace    = var.workload_identity.namespace
+  identities   = var.workload_identity.identities
+
+  tags = local.eks_tags
+
+  depends_on = [module.eks_cluster]
+}
+
+module "eks_irsa" {
+  count  = var.workload_identity_mode == "irsa" ? 1 : 0
+  source = "../../modules/eks/irsa"
+
+  oidc_issuer_url = module.eks_cluster.cluster_oidc_issuer_url
+  namespace       = var.workload_identity.namespace
+  identities      = var.workload_identity.identities
+
+  tags = local.eks_tags
+}
+
 output "eks_cluster_name" {
   description = "Name of the environment EKS cluster."
   value       = module.eks_cluster.cluster_name
@@ -112,4 +137,18 @@ output "eks_cluster_name" {
 output "eks_cluster_endpoint" {
   description = "Endpoint of the environment EKS Kubernetes API server."
   value       = module.eks_cluster.cluster_endpoint
+}
+
+output "frontend_workload_role_arn" {
+  description = "ARN of the Dev frontend workload IAM role."
+  value = var.workload_identity_mode == "pod_identity" ? (
+    module.eks_pod_identity[0].role_arns["frontend"]
+  ) : module.eks_irsa[0].role_arns["frontend"]
+}
+
+output "backend_workload_role_arn" {
+  description = "ARN of the Dev backend workload IAM role."
+  value = var.workload_identity_mode == "pod_identity" ? (
+    module.eks_pod_identity[0].role_arns["backend"]
+  ) : module.eks_irsa[0].role_arns["backend"]
 }

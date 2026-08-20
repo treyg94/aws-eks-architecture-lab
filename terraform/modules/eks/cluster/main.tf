@@ -78,8 +78,15 @@ resource "aws_eks_access_policy_association" "operator_admin" {
   }
 }
 
+locals {
+  addons = toset(concat(
+    ["vpc-cni", "coredns", "kube-proxy"],
+    var.enable_pod_identity_agent ? ["eks-pod-identity-agent"] : [],
+  ))
+}
+
 resource "aws_eks_addon" "this" {
-  for_each = toset(["vpc-cni", "coredns", "kube-proxy"])
+  for_each = local.addons
 
   cluster_name = aws_eks_cluster.this.name
   addon_name   = each.value

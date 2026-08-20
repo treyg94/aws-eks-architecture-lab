@@ -67,6 +67,16 @@ The following choices require explicit design work in later tasks and are not en
 - Test uses a `t3.small` managed node group in private application subnets with 30 GiB disks and `1/2/2` capacity. Fargate is disabled.
 - Prod is Fargate-only. `app-fargate` selects namespace `app` with `infrastructure=fargate`. `coredns-fargate` selects CoreDNS Pods in `kube-system` with `k8s-app=kube-dns`, and the CoreDNS add-on uses Fargate compute.
 
+## EKS workload identity foundation
+
+- EKS Pod Identity is the preferred workload identity model because it avoids per-cluster IAM OIDC trust configuration and provides direct EKS associations between service accounts and IAM roles.
+- Dev and Test use EKS Pod Identity because their workloads run on supported Linux EC2 worker nodes. Both clusters install the EKS Pod Identity Agent add-on.
+- Prod remains intentionally Fargate-only. AWS does not support EKS Pod Identity for Fargate workloads, so Prod uses IAM roles for service accounts (IRSA) and a cluster-specific IAM OIDC provider.
+- The mixed design is intentional and provides a lab comparison between EKS Pod Identity and IRSA while preserving the selected compute architecture.
+- Every environment defines separate `frontend` and `backend` workload identities for the `app` namespace. Each service account receives its own environment-isolated IAM role to support later least-privilege testing.
+- Workload roles intentionally begin without attached application permission policies. Exact least-privilege access to services such as Secrets Manager, S3, databases, or queues will be added only when those services are introduced.
+- Terraform creates only the AWS identity integrations and may reference the intended namespace and service-account names before Kubernetes creates those objects during the workload configuration phase.
+
 ## Future scenarios
 
 1. Test EKS access and Kubernetes RBAC with cluster administrators, namespace-scoped developers, and read-only identities.

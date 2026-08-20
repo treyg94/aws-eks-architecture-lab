@@ -73,3 +73,29 @@ variable "fargate_profiles" {
   default = []
 
 }
+
+variable "workload_identity_mode" {
+  description = "Workload identity integration used by the environment."
+  type        = string
+
+  validation {
+    condition     = contains(["pod_identity", "irsa"], var.workload_identity_mode)
+    error_message = "Workload identity mode must be pod_identity or irsa."
+  }
+}
+
+variable "workload_identity" {
+  description = "Namespace and service-account IAM role names for application workloads."
+  type = object({
+    namespace = string
+    identities = map(object({
+      service_account_name = string
+      role_name            = string
+    }))
+  })
+
+  validation {
+    condition     = toset(keys(var.workload_identity.identities)) == toset(["frontend", "backend"])
+    error_message = "Workload identities must define exactly frontend and backend."
+  }
+}
