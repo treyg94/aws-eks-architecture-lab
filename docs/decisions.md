@@ -146,3 +146,16 @@ The following choices require explicit design work in later tasks and are not en
 - Each frontend workload role receives only `ssm:GetParameter` on its exact environment-specific parameter ARN. Backend roles receive no Parameter Store permission from this foundation, and wildcard Parameter Store access is prohibited.
 - Planned security tests verify that each frontend can read only its own environment API URL, cross-environment reads fail, frontend cannot connect to PostgreSQL or access the RDS master secret, backend is network-authorized on TCP/5432, and backend later authenticates to PostgreSQL with IAM database authentication.
 - Kubernetes `SecurityGroupPolicy` objects, VPC CNI changes, and the EKS cluster IAM policy attachment are intentionally deferred and are not implemented by this foundation.
+
+## Deferred post-deployment database configuration
+
+The PostgreSQL application role is intentionally not created as part of the AWS Terraform buildout.
+
+After the RDS instance is deployed and reachable, create the logical application database user inside PostgreSQL:
+
+    CREATE USER app1_backend;
+    GRANT rds_iam TO app1_backend;
+
+Grant only the database, schema, and object privileges required by the backend application.
+
+This is a post-deployment database configuration task. AWS Terraform is responsible for enabling RDS IAM database authentication and granting the backend workload IAM role `rds-db:connect` access to the `app1_backend` database user. The PostgreSQL user itself is configured inside the database after deployment.
