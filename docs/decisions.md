@@ -77,6 +77,31 @@ The following choices require explicit design work in later tasks and are not en
 - Workload roles intentionally begin without attached application permission policies. Exact least-privilege access to services such as Secrets Manager, S3, databases, or queues will be added only when those services are introduced.
 - Terraform creates only the AWS identity integrations and may reference the intended namespace and service-account names before Kubernetes creates those objects during the workload configuration phase.
 
+## Major architecture decision: IAM ownership boundaries
+
+- IAM ownership is based on the identity's purpose; this lab does not centralize every IAM role into one shared module.
+- **Service-operational identities** remain owned by the service module that requires them. The EKS cluster role stays in the EKS cluster module, the EKS node role stays in the managed-node module, and the Fargate pod execution role stays in the Fargate module. The same rule applies to future service roles such as Lambda execution roles and ECS task execution roles.
+- Service-specific policy attachments remain with the module or environment layer that owns the capability. For Security Groups for Pods, the EKS cluster module continues to create the existing cluster role and conditionally attaches `AmazonEKSVPCResourceController` when `enable_pod_eni = true`; that role is not moved into a shared IAM module.
+- **Workload/application identities** represent applications rather than AWS service operations and belong in a shared environment identity layer. This category includes frontend, backend, reporting, payments, and automation workloads. The existing frontend and backend role implementation is unchanged in this task; a later dedicated Terraform task may move those roles into the shared identity layer without changing their Pod Identity or IRSA behavior.
+- **Human and administrative identities** also belong in the shared environment identity layer for this lab. This intentionally supports learning scenarios such as onboarding a new developer IAM user, assigning least-privilege App1 access, testing allowed and denied actions, and later revoking that access. Examples include Trey, platform administrators, developers, security auditors, CI/CD deployment roles, and future new-hire users.
+- Managing human IAM users in the application-oriented shared identity layer is a deliberate lab simplification. A mature organization would normally manage workforce access through a separate organization-level identity platform or infrastructure stack, such as IAM Identity Center, federation, or a corporate identity provider.
+- The intended shared environment identity organization is conceptual; these identities are not all implemented now:
+
+      shared identity layer
+      |-- workload identities
+      |   |-- frontend
+      |   |-- backend
+      |   |-- reporting
+      |   |-- payments
+      |   `-- automation
+      `-- human / administrative identities
+          |-- trey
+          |-- platform admin
+          |-- developer
+          |-- security auditor
+          |-- CI/CD deployment role
+          `-- future new-hire users
+
 ## Future scenarios
 
 1. Test EKS access and Kubernetes RBAC with cluster administrators, namespace-scoped developers, and read-only identities.
@@ -130,7 +155,7 @@ The following choices require explicit design work in later tasks and are not en
 - Dev is an intentional convenience exception for direct desktop administration and testing: its RDS instance uses the existing Dev public subnets and is publicly accessible, but PostgreSQL ingress is restricted to the existing operator `104.189.79.218/32` CIDR and the dedicated backend workload security group. Internet-wide ingress is prohibited.
 - Every environment receives a dedicated backend workload security group and an RDS security group. PostgreSQL TCP/5432 is allowed only from the backend group, plus the Dev-only operator CIDR. The backend group will be attached to backend compute during the later Kubernetes workload configuration phase; the frontend receives no database network path.
 - RDS manages the master password in Secrets Manager using the environment-specific RDS KMS key; Terraform does not generate, store, or expose the password. IAM database authentication is enabled for future backend application access.
-- The identity modules continue to own the workload IAM roles, while each environment root composes a resource-specific inline policy authorizing only its backend role to call `rds-db:connect` for its own RDS resource ID and the shared logical PostgreSQL application username `app1_backend`. Wildcard database resource IDs, wildcard usernames, frontend database permissions, and master-secret permissions are prohibited.
+- The current EKS identity modules create the workload IAM roles pending the dedicated shared-identity refactor. Each environment root composes a resource-specific inline policy authorizing only its backend role to call `rds-db:connect` for its own RDS resource ID and the shared logical PostgreSQL application username `app1_backend`. Wildcard database resource IDs, wildcard usernames, frontend database permissions, and master-secret permissions are prohibited.
 - Backend database access requires both network authorization from the backend workload security group to the environment RDS security group on PostgreSQL TCP/5432 and IAM authorization through the environment-scoped `rds-db:connect` policy. The actual `app1_backend` PostgreSQL user and its `rds_iam` grant are intentionally deferred to the later database/platform configuration phase.
 - Each environment uses a separate rotating customer-managed KMS key and friendly alias for database storage and the RDS-managed master secret.
 - Automated backups are retained for one day. Deletion protection and Multi-AZ are disabled, but deletion requires a final snapshot with a random suffix generated once per RDS resource lifecycle. The suffix remains stable across plans and applies and is regenerated after a full destroy and later recreation to prevent retained-snapshot name collisions.
