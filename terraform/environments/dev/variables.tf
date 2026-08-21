@@ -84,6 +84,18 @@ variable "workload_identity_mode" {
   }
 }
 
+variable "vpc_cni" {
+  description = "Supported Amazon VPC CNI settings for the environment."
+  type = object({
+    enable_pod_eni                    = optional(bool, false)
+    pod_security_group_enforcing_mode = optional(string)
+    enable_prefix_delegation          = optional(bool, false)
+    warm_ip_target                    = optional(number)
+    minimum_ip_target                 = optional(number)
+  })
+  default = {}
+}
+
 variable "workload_identity" {
   description = "Namespace and service-account IAM role names for application workloads."
   type = object({

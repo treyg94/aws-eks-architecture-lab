@@ -21,6 +21,13 @@ resource "aws_iam_role_policy_attachment" "cluster" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
 }
 
+resource "aws_iam_role_policy_attachment" "vpc_resource_controller" {
+  count = var.vpc_cni.enable_pod_eni ? 1 : 0
+
+  role       = aws_iam_role.cluster.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController"
+}
+
 resource "aws_cloudwatch_log_group" "cluster" {
   name              = "/aws/eks/${var.cluster_name}/cluster"
   retention_in_days = var.log_retention_days
@@ -57,6 +64,7 @@ resource "aws_eks_cluster" "this" {
   depends_on = [
     aws_cloudwatch_log_group.cluster,
     aws_iam_role_policy_attachment.cluster,
+    aws_iam_role_policy_attachment.vpc_resource_controller,
   ]
 }
 
@@ -83,6 +91,27 @@ locals {
     ["vpc-cni", "coredns", "kube-proxy"],
     var.enable_pod_identity_agent ? ["eks-pod-identity-agent"] : [],
   ))
+
+  vpc_cni_environment = merge(
+    var.vpc_cni.enable_pod_eni ? { ENABLE_POD_ENI = "true" } : {},
+    var.vpc_cni.pod_security_group_enforcing_mode != null ? {
+      POD_SECURITY_GROUP_ENFORCING_MODE = var.vpc_cni.pod_security_group_enforcing_mode
+    } : {},
+    var.vpc_cni.enable_prefix_delegation ? { ENABLE_PREFIX_DELEGATION = "true" } : {},
+    var.vpc_cni.warm_ip_target != null ? { WARM_IP_TARGET = tostring(var.vpc_cni.warm_ip_target) } : {},
+    var.vpc_cni.minimum_ip_target != null ? { MINIMUM_IP_TARGET = tostring(var.vpc_cni.minimum_ip_target) } : {},
+  )
+
+  addon_configuration_values = {
+    "vpc-cni" = length(local.vpc_cni_environment) > 0 ? jsonencode({
+      env = local.vpc_cni_environment
+    }) : null
+    coredns = var.coredns_compute_type != null ? jsonencode({
+      computeType = var.coredns_compute_type
+    }) : null
+    kube-proxy             = null
+    eks-pod-identity-agent = null
+  }
 }
 
 resource "aws_eks_addon" "this" {
@@ -91,9 +120,7 @@ resource "aws_eks_addon" "this" {
   cluster_name = aws_eks_cluster.this.name
   addon_name   = each.value
 
-  configuration_values = each.value == "coredns" && var.coredns_compute_type != null ? jsonencode({
-    computeType = var.coredns_compute_type
-  }) : null
+  configuration_values = local.addon_configuration_values[each.value]
 
   tags = var.tags
 }

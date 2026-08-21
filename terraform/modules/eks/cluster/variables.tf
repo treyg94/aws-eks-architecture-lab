@@ -51,6 +51,34 @@ variable "enable_pod_identity_agent" {
   default     = false
 }
 
+variable "vpc_cni" {
+  description = "Supported Amazon VPC CNI settings translated into EKS add-on configuration."
+  type = object({
+    enable_pod_eni                    = optional(bool, false)
+    pod_security_group_enforcing_mode = optional(string)
+    enable_prefix_delegation          = optional(bool, false)
+    warm_ip_target                    = optional(number)
+    minimum_ip_target                 = optional(number)
+  })
+  default = {}
+
+  validation {
+    condition = (
+      var.vpc_cni.pod_security_group_enforcing_mode == null ||
+      contains(["standard", "strict"], var.vpc_cni.pod_security_group_enforcing_mode)
+    )
+    error_message = "VPC CNI Pod security group enforcing mode must be standard, strict, or null."
+  }
+
+  validation {
+    condition = alltrue([
+      try(var.vpc_cni.warm_ip_target >= 0 && floor(var.vpc_cni.warm_ip_target) == var.vpc_cni.warm_ip_target, true),
+      try(var.vpc_cni.minimum_ip_target >= 0 && floor(var.vpc_cni.minimum_ip_target) == var.vpc_cni.minimum_ip_target, true),
+    ])
+    error_message = "VPC CNI warm and minimum IP targets must be non-negative whole numbers or null."
+  }
+}
+
 variable "tags" {
   description = "Tags applied to EKS and supporting AWS resources."
   type        = map(string)

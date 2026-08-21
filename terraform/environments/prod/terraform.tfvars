@@ -7,6 +7,10 @@ enable_fargate                      = true
 workload_identity_mode              = "irsa"
 workload_security_group_name_prefix = "app1-prod"
 
+vpc_cni = {
+  enable_pod_eni = false
+}
+
 workload_identity = {
   namespace = "app"
   identities = {

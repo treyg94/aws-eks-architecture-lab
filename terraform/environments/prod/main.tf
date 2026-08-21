@@ -86,6 +86,7 @@ module "eks_cluster" {
   log_retention_days        = 3
   coredns_compute_type      = var.enable_fargate && !var.enable_managed_nodes ? "Fargate" : null
   enable_pod_identity_agent = var.workload_identity_mode == "pod_identity"
+  vpc_cni                   = var.vpc_cni
 
   tags = local.eks_tags
 }

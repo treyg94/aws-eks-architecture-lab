@@ -140,12 +140,22 @@ The following choices require explicit design work in later tasks and are not en
 
 - Each environment instantiates the reusable `workload-security-groups` module and owns separate, application-named frontend and backend workload security groups tagged as workload networking. The RDS module owns only its database security group and the connectivity rules involving it. Only the backend group is authorized to reach its environment RDS security group on PostgreSQL TCP/5432; the frontend group has no RDS ingress or egress rule and receives no database IAM authentication or master-secret permission.
 - These workload security groups are infrastructure prepared now, but they are not attached to Kubernetes workloads until the later EKS/platform configuration phase.
-- For Dev and Test's EC2-backed EKS clusters, that later phase will attach `AmazonEKSVPCResourceController` to the cluster IAM role, enable VPC CNI Security Groups for Pods with `ENABLE_POD_ENI=true`, and create Kubernetes `SecurityGroupPolicy` resources. The frontend policy will select frontend Pods and assign the frontend workload group; the backend policy will select backend Pods and assign the backend workload group.
+- Dev and Test's EC2-backed EKS clusters attach `AmazonEKSVPCResourceController` to the existing cluster IAM role and configure the VPC CNI add-on with `ENABLE_POD_ENI=true`, preparing the AWS-side prerequisites for Security Groups for Pods. The later Kubernetes/platform phase will create `SecurityGroupPolicy` resources that select frontend and backend Pods and assign their corresponding workload groups.
 - For Prod's Fargate-only cluster, Kubernetes `SecurityGroupPolicy` resources will assign the corresponding frontend and backend workload groups. Fargate does not require EC2 Pod ENI enablement, and the policies must preserve required EKS cluster and control-plane communication.
 - Dev, Test, and Prod each own one non-sensitive SSM Parameter Store `String` parameter for the frontend API URL: `/app1/dev/frontend/api-url`, `/app1/test/frontend/api-url`, and `/app1/prod/frontend/api-url` respectively. These parameters are environment infrastructure, not shared infrastructure.
 - Each frontend workload role receives only `ssm:GetParameter` on its exact environment-specific parameter ARN. Backend roles receive no Parameter Store permission from this foundation, and wildcard Parameter Store access is prohibited.
 - Planned security tests verify that each frontend can read only its own environment API URL, cross-environment reads fail, frontend cannot connect to PostgreSQL or access the RDS master secret, backend is network-authorized on TCP/5432, and backend later authenticates to PostgreSQL with IAM database authentication.
-- Kubernetes `SecurityGroupPolicy` objects, VPC CNI changes, and the EKS cluster IAM policy attachment are intentionally deferred and are not implemented by this foundation.
+- Kubernetes `SecurityGroupPolicy` objects remain intentionally deferred and are not implemented by this foundation.
+
+## Major architecture decision: controlled VPC CNI configuration
+
+- The EKS cluster module's structured `vpc_cni` object is the authoritative interface for supported Amazon VPC CNI configuration. Environment roots cannot pass arbitrary raw add-on `configuration_values` or unsupported CNI keys.
+- Supported Terraform fields are translated inside the module to their AWS VPC CNI environment-variable names and string values, then encoded with `jsonencode`. Null optional settings are omitted. Adding a future CNI capability requires extending the structured object, adding applicable validation, updating this translation, and opting in only the environments that need it.
+- This controlled interface intentionally keeps VPC CNI concepts visible for EKS learning while providing typed inputs, validation, and reviewable environment differences.
+- Dev and Test enable Pod ENI support for future Security Groups for Pods. The EKS module conditionally attaches the EKS-specific `AmazonEKSVPCResourceController` managed policy to their existing cluster roles; it does not attach that policy to node, workload, or Fargate roles.
+- Prod remains Fargate-only, does not enable the EC2 Pod ENI path, and does not receive the VPC Resource Controller policy through this capability.
+- `pod_security_group_enforcing_mode` supports only `standard` or `strict`, but remains unset because that architecture choice has not been made. The module therefore omits `POD_SECURITY_GROUP_ENFORCING_MODE` until a later explicit decision.
+- Prefix delegation, warm-IP tuning, custom networking, and Kubernetes `SecurityGroupPolicy` resources are not enabled by this decision.
 
 ## Deferred post-deployment database configuration
 
