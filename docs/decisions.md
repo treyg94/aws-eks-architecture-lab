@@ -132,7 +132,7 @@ The following choices require explicit design work in later tasks and are not en
 - RDS manages the master password in Secrets Manager using the environment-specific RDS KMS key; Terraform does not generate, store, or expose the password. IAM database authentication is enabled for future backend application access.
 - No application IAM database policy is attached yet because the database user and final `rds-db:connect` resource scope will be defined during workload configuration. Broad RDS permissions and frontend database access are prohibited.
 - Each environment uses a separate rotating customer-managed KMS key and friendly alias for database storage and the RDS-managed master secret.
-- Automated backups are retained for one day. Deletion protection and Multi-AZ are disabled, but deletion requires a uniquely timestamped final snapshot whose identifier remains stable during the instance lifecycle.
+- Automated backups are retained for one day. Deletion protection and Multi-AZ are disabled, but deletion requires a final snapshot with a random suffix generated once per RDS resource lifecycle. The suffix remains stable across plans and applies and is regenerated after a full destroy and later recreation to prevent retained-snapshot name collisions.
 - Scenario 001 in `docs/scenarios.md` records the future production Multi-AZ change request and its engineering considerations; Multi-AZ is not implemented in this foundation.
 
 ## Workload network identity and Parameter Store foundation

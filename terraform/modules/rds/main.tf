@@ -6,6 +6,14 @@ resource "aws_kms_key" "this" {
   tags = var.tags
 }
 
+resource "random_id" "final_snapshot" {
+  byte_length = 4
+
+  keepers = {
+    db_identifier = var.identifier
+  }
+}
+
 resource "aws_kms_alias" "this" {
   name          = "alias/${var.kms_alias_name}"
   target_key_id = aws_kms_key.this.key_id
@@ -91,12 +99,8 @@ resource "aws_db_instance" "this" {
   backup_retention_period   = var.backup_retention_period
   deletion_protection       = false
   skip_final_snapshot       = false
-  final_snapshot_identifier = "${var.identifier}-final-${formatdate("YYYYMMDDhhmmss", plantimestamp())}"
+  final_snapshot_identifier = "${var.identifier}-final-${random_id.final_snapshot.hex}"
   copy_tags_to_snapshot     = true
 
   tags = var.tags
-
-  lifecycle {
-    ignore_changes = [final_snapshot_identifier]
-  }
 }
