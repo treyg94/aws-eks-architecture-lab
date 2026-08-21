@@ -55,6 +55,10 @@ output "private_app_subnet_ids" {
 
 data "aws_caller_identity" "current" {}
 
+data "aws_partition" "current" {}
+
+data "aws_region" "current" {}
+
 data "aws_iam_session_context" "operator" {
   arn = data.aws_caller_identity.current.arn
 }
@@ -324,6 +328,25 @@ resource "aws_iam_role_policy" "frontend_api_url_read" {
   ) : module.eks_irsa[0].role_names["frontend"]
 
   policy = data.aws_iam_policy_document.frontend_api_url_read.json
+}
+
+data "aws_iam_policy_document" "backend_rds_connect" {
+  statement {
+    effect  = "Allow"
+    actions = ["rds-db:connect"]
+    resources = [
+      "arn:${data.aws_partition.current.partition}:rds-db:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:dbuser:${module.rds.db_resource_id}/app1_backend",
+    ]
+  }
+}
+
+resource "aws_iam_role_policy" "backend_rds_connect" {
+  name = "${var.cluster_name}-backend-rds-connect"
+  role = var.workload_identity_mode == "pod_identity" ? (
+    module.eks_pod_identity[0].role_names["backend"]
+  ) : module.eks_irsa[0].role_names["backend"]
+
+  policy = data.aws_iam_policy_document.backend_rds_connect.json
 }
 
 output "frontend_api_url_parameter_name" {

@@ -18,6 +18,11 @@ output "db_instance_arn" {
   value       = aws_db_instance.this.arn
 }
 
+output "db_resource_id" {
+  description = "Immutable resource ID of the RDS instance for IAM database authentication."
+  value       = aws_db_instance.this.resource_id
+}
+
 output "master_secret_arn" {
   description = "ARN of the RDS-managed master credential secret."
   value       = aws_db_instance.this.master_user_secret[0].secret_arn
