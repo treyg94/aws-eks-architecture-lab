@@ -61,6 +61,7 @@ terraform/
 |   |-- ecr/
 |   |-- parameter-store/
 |   |-- rds/
+|   |-- workload-security-groups/
 |   `-- eks/
 |       |-- cluster/
 |       |-- irsa/

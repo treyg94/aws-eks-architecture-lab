@@ -216,21 +216,34 @@ output "application_dns_name" {
   value       = module.dns_alias.fqdn
 }
 
+module "workload_security_groups" {
+  source = "../../modules/workload-security-groups"
+
+  name_prefix = var.workload_security_group_name_prefix
+  vpc_id      = module.vpc.vpc_id
+
+  tags = {
+    Application = "App1"
+    Component   = "WorkloadNetworking"
+  }
+}
+
 module "rds" {
   source = "../../modules/rds"
 
-  identifier              = var.rds.identifier
-  engine_version          = var.rds.engine_version
-  instance_class          = var.rds.instance_class
-  storage_type            = var.rds.storage_type
-  allocated_storage       = var.rds.allocated_storage
-  master_username         = var.rds.master_username
-  vpc_id                  = module.vpc.vpc_id
-  subnet_ids              = values(module.vpc.private_db_subnet_ids)
-  publicly_accessible     = var.rds.publicly_accessible
-  operator_access_cidrs   = var.rds.operator_access_cidrs
-  backup_retention_period = var.rds.backup_retention_period
-  kms_alias_name          = var.rds.kms_alias_name
+  identifier                         = var.rds.identifier
+  engine_version                     = var.rds.engine_version
+  instance_class                     = var.rds.instance_class
+  storage_type                       = var.rds.storage_type
+  allocated_storage                  = var.rds.allocated_storage
+  master_username                    = var.rds.master_username
+  vpc_id                             = module.vpc.vpc_id
+  backend_workload_security_group_id = module.workload_security_groups.backend_security_group_id
+  subnet_ids                         = values(module.vpc.private_db_subnet_ids)
+  publicly_accessible                = var.rds.publicly_accessible
+  operator_access_cidrs              = var.rds.operator_access_cidrs
+  backup_retention_period            = var.rds.backup_retention_period
+  kms_alias_name                     = var.rds.kms_alias_name
 
   tags = {
     Application = "App1"
@@ -270,7 +283,7 @@ output "rds_kms_key_arn" {
 
 output "backend_workload_security_group_id" {
   description = "ID of the Prod backend workload security group."
-  value       = module.rds.backend_workload_security_group_id
+  value       = module.workload_security_groups.backend_security_group_id
 }
 
 output "rds_security_group_id" {
@@ -280,7 +293,7 @@ output "rds_security_group_id" {
 
 output "frontend_workload_security_group_id" {
   description = "ID of the Prod frontend workload security group."
-  value       = module.rds.frontend_workload_security_group_id
+  value       = module.workload_security_groups.frontend_security_group_id
 }
 
 module "frontend_api_url_parameter" {

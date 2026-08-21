@@ -1,10 +1,11 @@
-cluster_name                = "app1-dev-eks"
-kubernetes_version          = "1.36"
-cluster_subnet_type         = "private_app"
-cluster_public_access_cidrs = ["104.189.79.218/32"]
-enable_managed_nodes        = true
-enable_fargate              = false
-workload_identity_mode      = "pod_identity"
+cluster_name                        = "app1-dev-eks"
+kubernetes_version                  = "1.36"
+cluster_subnet_type                 = "private_app"
+cluster_public_access_cidrs         = ["104.189.79.218/32"]
+enable_managed_nodes                = true
+enable_fargate                      = false
+workload_identity_mode              = "pod_identity"
+workload_security_group_name_prefix = "app1-dev"
 
 workload_identity = {
   namespace = "app"

@@ -142,3 +142,8 @@ variable "frontend_api_url_parameter" {
     value = string
   })
 }
+
+variable "workload_security_group_name_prefix" {
+  description = "Application and environment prefix for workload security-group names."
+  type        = string
+}

@@ -36,6 +36,11 @@ variable "vpc_id" {
   type        = string
 }
 
+variable "backend_workload_security_group_id" {
+  description = "ID of the application-owned backend workload security group allowed to reach PostgreSQL."
+  type        = string
+}
+
 variable "subnet_ids" {
   description = "Subnet IDs used by the DB subnet group."
   type        = list(string)

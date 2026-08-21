@@ -20,26 +20,6 @@ resource "aws_db_subnet_group" "this" {
   })
 }
 
-resource "aws_security_group" "backend_workload" {
-  name        = "${var.identifier}-backend-workload-sg"
-  description = "Database egress for the ${var.identifier} backend workload."
-  vpc_id      = var.vpc_id
-
-  tags = merge(var.tags, {
-    Name = "${var.identifier}-backend-workload-sg"
-  })
-}
-
-resource "aws_security_group" "frontend_workload" {
-  name        = "${var.identifier}-frontend-workload-sg"
-  description = "Network identity for the ${var.identifier} frontend workload."
-  vpc_id      = var.vpc_id
-
-  tags = merge(var.tags, {
-    Name = "${var.identifier}-frontend-workload-sg"
-  })
-}
-
 resource "aws_security_group" "rds" {
   name        = "${var.identifier}-rds-sg"
   description = "PostgreSQL access to the ${var.identifier} RDS instance."
@@ -51,7 +31,7 @@ resource "aws_security_group" "rds" {
 }
 
 resource "aws_vpc_security_group_egress_rule" "backend_to_rds" {
-  security_group_id            = aws_security_group.backend_workload.id
+  security_group_id            = var.backend_workload_security_group_id
   referenced_security_group_id = aws_security_group.rds.id
   ip_protocol                  = "tcp"
   from_port                    = var.port
@@ -62,7 +42,7 @@ resource "aws_vpc_security_group_egress_rule" "backend_to_rds" {
 
 resource "aws_vpc_security_group_ingress_rule" "backend_to_rds" {
   security_group_id            = aws_security_group.rds.id
-  referenced_security_group_id = aws_security_group.backend_workload.id
+  referenced_security_group_id = var.backend_workload_security_group_id
   ip_protocol                  = "tcp"
   from_port                    = var.port
   to_port                      = var.port
