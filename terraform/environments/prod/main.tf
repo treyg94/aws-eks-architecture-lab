@@ -215,3 +215,123 @@ output "application_dns_name" {
   description = "Route 53 alias name for the Prod application."
   value       = module.dns_alias.fqdn
 }
+
+module "workload_security_groups" {
+  source = "../../modules/workload-security-groups"
+
+  name_prefix = var.workload_security_group_name_prefix
+  vpc_id      = module.vpc.vpc_id
+
+  tags = {
+    Application = "App1"
+    Component   = "WorkloadNetworking"
+  }
+}
+
+module "rds" {
+  source = "../../modules/rds"
+
+  identifier                         = var.rds.identifier
+  engine_version                     = var.rds.engine_version
+  instance_class                     = var.rds.instance_class
+  storage_type                       = var.rds.storage_type
+  allocated_storage                  = var.rds.allocated_storage
+  master_username                    = var.rds.master_username
+  vpc_id                             = module.vpc.vpc_id
+  backend_workload_security_group_id = module.workload_security_groups.backend_security_group_id
+  subnet_ids                         = values(module.vpc.private_db_subnet_ids)
+  publicly_accessible                = var.rds.publicly_accessible
+  operator_access_cidrs              = var.rds.operator_access_cidrs
+  backup_retention_period            = var.rds.backup_retention_period
+  kms_alias_name                     = var.rds.kms_alias_name
+
+  tags = {
+    Application = "App1"
+    Component   = "Database"
+  }
+}
+
+output "rds_endpoint" {
+  description = "Connection endpoint of the Prod RDS instance."
+  value       = module.rds.endpoint
+}
+
+output "rds_port" {
+  description = "Connection port of the Prod RDS instance."
+  value       = module.rds.port
+}
+
+output "rds_instance_identifier" {
+  description = "Identifier of the Prod RDS instance."
+  value       = module.rds.db_instance_identifier
+}
+
+output "rds_instance_arn" {
+  description = "ARN of the Prod RDS instance."
+  value       = module.rds.db_instance_arn
+}
+
+output "rds_master_secret_arn" {
+  description = "ARN of the Prod RDS-managed master credential secret."
+  value       = module.rds.master_secret_arn
+}
+
+output "rds_kms_key_arn" {
+  description = "ARN of the Prod RDS KMS key."
+  value       = module.rds.kms_key_arn
+}
+
+output "backend_workload_security_group_id" {
+  description = "ID of the Prod backend workload security group."
+  value       = module.workload_security_groups.backend_security_group_id
+}
+
+output "rds_security_group_id" {
+  description = "ID of the Prod RDS security group."
+  value       = module.rds.rds_security_group_id
+}
+
+output "frontend_workload_security_group_id" {
+  description = "ID of the Prod frontend workload security group."
+  value       = module.workload_security_groups.frontend_security_group_id
+}
+
+module "frontend_api_url_parameter" {
+  source = "../../modules/parameter-store"
+
+  name        = var.frontend_api_url_parameter.name
+  description = "Prod frontend API URL."
+  value       = var.frontend_api_url_parameter.value
+
+  tags = {
+    Application = "App1"
+    Component   = "ApplicationConfiguration"
+  }
+}
+
+data "aws_iam_policy_document" "frontend_api_url_read" {
+  statement {
+    effect    = "Allow"
+    actions   = ["ssm:GetParameter"]
+    resources = [module.frontend_api_url_parameter.parameter_arn]
+  }
+}
+
+resource "aws_iam_role_policy" "frontend_api_url_read" {
+  name = "${var.cluster_name}-frontend-api-url-read"
+  role = var.workload_identity_mode == "pod_identity" ? (
+    module.eks_pod_identity[0].role_names["frontend"]
+  ) : module.eks_irsa[0].role_names["frontend"]
+
+  policy = data.aws_iam_policy_document.frontend_api_url_read.json
+}
+
+output "frontend_api_url_parameter_name" {
+  description = "Name of the Prod frontend API URL parameter."
+  value       = module.frontend_api_url_parameter.parameter_name
+}
+
+output "frontend_api_url_parameter_arn" {
+  description = "ARN of the Prod frontend API URL parameter."
+  value       = module.frontend_api_url_parameter.parameter_arn
+}

@@ -121,3 +121,27 @@ The following choices require explicit design work in later tasks and are not en
 - A dedicated customer-managed KMS key with rotation enabled and a friendly alias encrypts repository content.
 - Configurable lifecycle rules remove untagged images after seven days and cap total retained image history at 20 images by default. These lab-friendly defaults limit stale storage while preserving recent images for testing and rollback exercises.
 - Application image builds and pushes are intentionally deferred until the EKS workload is configured. This foundation does not create workloads, Kubernetes resources, or delivery pipelines.
+
+## RDS PostgreSQL foundation
+
+- Dev, Test, and Prod each own an isolated standard RDS for PostgreSQL instance through their existing environment root; database infrastructure is not shared between environments.
+- PostgreSQL major version 17 is pinned while AWS-supported automatic minor version upgrades remain enabled. Each environment starts with a single `db.t4g.micro` instance, 30 GiB of gp3 storage, and Multi-AZ disabled to support later capacity and availability exercises.
+- Test and Prod RDS instances are not publicly accessible and use only their isolated private database subnets.
+- Dev is an intentional convenience exception for direct desktop administration and testing: its RDS instance uses the existing Dev public subnets and is publicly accessible, but PostgreSQL ingress is restricted to the existing operator `104.189.79.218/32` CIDR and the dedicated backend workload security group. Internet-wide ingress is prohibited.
+- Every environment receives a dedicated backend workload security group and an RDS security group. PostgreSQL TCP/5432 is allowed only from the backend group, plus the Dev-only operator CIDR. The backend group will be attached to backend compute during the later Kubernetes workload configuration phase; the frontend receives no database network path.
+- RDS manages the master password in Secrets Manager using the environment-specific RDS KMS key; Terraform does not generate, store, or expose the password. IAM database authentication is enabled for future backend application access.
+- No application IAM database policy is attached yet because the database user and final `rds-db:connect` resource scope will be defined during workload configuration. Broad RDS permissions and frontend database access are prohibited.
+- Each environment uses a separate rotating customer-managed KMS key and friendly alias for database storage and the RDS-managed master secret.
+- Automated backups are retained for one day. Deletion protection and Multi-AZ are disabled, but deletion requires a final snapshot with a random suffix generated once per RDS resource lifecycle. The suffix remains stable across plans and applies and is regenerated after a full destroy and later recreation to prevent retained-snapshot name collisions.
+- Scenario 001 in `docs/scenarios.md` records the future production Multi-AZ change request and its engineering considerations; Multi-AZ is not implemented in this foundation.
+
+## Workload network identity and Parameter Store foundation
+
+- Each environment instantiates the reusable `workload-security-groups` module and owns separate, application-named frontend and backend workload security groups tagged as workload networking. The RDS module owns only its database security group and the connectivity rules involving it. Only the backend group is authorized to reach its environment RDS security group on PostgreSQL TCP/5432; the frontend group has no RDS ingress or egress rule and receives no database IAM authentication or master-secret permission.
+- These workload security groups are infrastructure prepared now, but they are not attached to Kubernetes workloads until the later EKS/platform configuration phase.
+- For Dev and Test's EC2-backed EKS clusters, that later phase will attach `AmazonEKSVPCResourceController` to the cluster IAM role, enable VPC CNI Security Groups for Pods with `ENABLE_POD_ENI=true`, and create Kubernetes `SecurityGroupPolicy` resources. The frontend policy will select frontend Pods and assign the frontend workload group; the backend policy will select backend Pods and assign the backend workload group.
+- For Prod's Fargate-only cluster, Kubernetes `SecurityGroupPolicy` resources will assign the corresponding frontend and backend workload groups. Fargate does not require EC2 Pod ENI enablement, and the policies must preserve required EKS cluster and control-plane communication.
+- Dev, Test, and Prod each own one non-sensitive SSM Parameter Store `String` parameter for the frontend API URL: `/app1/dev/frontend/api-url`, `/app1/test/frontend/api-url`, and `/app1/prod/frontend/api-url` respectively. These parameters are environment infrastructure, not shared infrastructure.
+- Each frontend workload role receives only `ssm:GetParameter` on its exact environment-specific parameter ARN. Backend roles receive no Parameter Store permission from this foundation, and wildcard Parameter Store access is prohibited.
+- Planned security tests verify that each frontend can read only its own environment API URL, cross-environment reads fail, frontend cannot connect to PostgreSQL or access the RDS master secret, backend is network-authorized on TCP/5432, and backend later authenticates to PostgreSQL with IAM database authentication.
+- Kubernetes `SecurityGroupPolicy` objects, VPC CNI changes, and the EKS cluster IAM policy attachment are intentionally deferred and are not implemented by this foundation.

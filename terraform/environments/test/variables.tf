@@ -118,3 +118,32 @@ variable "dns" {
     certificate_domain = string
   })
 }
+
+variable "rds" {
+  description = "Environment-specific RDS PostgreSQL configuration."
+  type = object({
+    identifier              = string
+    engine_version          = string
+    instance_class          = string
+    storage_type            = string
+    allocated_storage       = number
+    master_username         = string
+    publicly_accessible     = bool
+    operator_access_cidrs   = list(string)
+    backup_retention_period = number
+    kms_alias_name          = string
+  })
+}
+
+variable "frontend_api_url_parameter" {
+  description = "Test frontend API URL Parameter Store configuration."
+  type = object({
+    name  = string
+    value = string
+  })
+}
+
+variable "workload_security_group_name_prefix" {
+  description = "Application and environment prefix for workload security-group names."
+  type        = string
+}
