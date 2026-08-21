@@ -1,0 +1,25 @@
+apiVersion: vpcresources.k8s.aws/v1beta1
+kind: SecurityGroupPolicy
+metadata:
+  name: frontend
+  namespace: app
+spec:
+  serviceAccountSelector:
+    matchLabels:
+      app.kubernetes.io/name: frontend
+  securityGroups:
+    groupIds:
+      - "${frontend_workload_security_group_id}"
+---
+apiVersion: vpcresources.k8s.aws/v1beta1
+kind: SecurityGroupPolicy
+metadata:
+  name: backend
+  namespace: app
+spec:
+  serviceAccountSelector:
+    matchLabels:
+      app.kubernetes.io/name: backend
+  securityGroups:
+    groupIds:
+      - "${backend_workload_security_group_id}"

@@ -8,7 +8,8 @@ workload_identity_mode              = "pod_identity"
 workload_security_group_name_prefix = "app1-test"
 
 vpc_cni = {
-  enable_pod_eni = true
+  enable_pod_eni                    = true
+  pod_security_group_enforcing_mode = "standard"
 }
 
 workload_identity = {
