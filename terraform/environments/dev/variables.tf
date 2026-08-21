@@ -115,3 +115,11 @@ variable "rds" {
     kms_alias_name          = string
   })
 }
+
+variable "frontend_api_url_parameter" {
+  description = "Dev frontend API URL Parameter Store configuration."
+  type = object({
+    name  = string
+    value = string
+  })
+}

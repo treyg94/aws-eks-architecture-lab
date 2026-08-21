@@ -20,6 +20,8 @@ Application workload identity is split between `frontend` and `backend` service 
 
 Each environment owns one small, single-instance RDS for PostgreSQL 17 database with 30 GiB of gp3 storage, IAM database authentication, an RDS-managed master password, and an environment-specific customer-managed KMS key. Test and Prod remain private in their isolated database subnets. Dev intentionally uses its public subnets and a publicly accessible endpoint restricted to the operator `/32` and the dedicated backend workload security group for direct desktop administration and testing. Multi-AZ is deferred to a documented lab scenario.
 
+Each environment also owns separate frontend and backend workload security groups plus a non-sensitive frontend API URL in SSM Parameter Store. Only the backend group has PostgreSQL network access. Each frontend IAM role can call only `ssm:GetParameter` against its exact environment parameter ARN. The workload security groups are prepared infrastructure and will be attached to Pods later through EKS Security Groups for Pods configuration.
+
 | Environment | EKS compute |
 | --- | --- |
 | Dev | One `t3.small` managed node by default, scaling to two, in public subnets |
@@ -57,6 +59,7 @@ terraform/
 |   |-- dns-acm/
 |   |-- dns-alias/
 |   |-- ecr/
+|   |-- parameter-store/
 |   |-- rds/
 |   `-- eks/
 |       |-- cluster/

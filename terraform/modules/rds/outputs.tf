@@ -33,6 +33,11 @@ output "backend_workload_security_group_id" {
   value       = aws_security_group.backend_workload.id
 }
 
+output "frontend_workload_security_group_id" {
+  description = "ID of the security group reserved for frontend workloads."
+  value       = aws_security_group.frontend_workload.id
+}
+
 output "rds_security_group_id" {
   description = "ID of the RDS security group."
   value       = aws_security_group.rds.id

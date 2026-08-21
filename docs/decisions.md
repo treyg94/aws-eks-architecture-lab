@@ -134,3 +134,14 @@ The following choices require explicit design work in later tasks and are not en
 - Each environment uses a separate rotating customer-managed KMS key and friendly alias for database storage and the RDS-managed master secret.
 - Automated backups are retained for one day. Deletion protection and Multi-AZ are disabled, but deletion requires a uniquely timestamped final snapshot whose identifier remains stable during the instance lifecycle.
 - Scenario 001 in `docs/scenarios.md` records the future production Multi-AZ change request and its engineering considerations; Multi-AZ is not implemented in this foundation.
+
+## Workload network identity and Parameter Store foundation
+
+- Each environment owns separate frontend and backend workload security groups. Only the backend group is authorized to reach its environment RDS security group on PostgreSQL TCP/5432; the frontend group has no RDS ingress or egress rule and receives no database IAM authentication or master-secret permission.
+- These workload security groups are infrastructure prepared now, but they are not attached to Kubernetes workloads until the later EKS/platform configuration phase.
+- For Dev and Test's EC2-backed EKS clusters, that later phase will attach `AmazonEKSVPCResourceController` to the cluster IAM role, enable VPC CNI Security Groups for Pods with `ENABLE_POD_ENI=true`, and create Kubernetes `SecurityGroupPolicy` resources. The frontend policy will select frontend Pods and assign the frontend workload group; the backend policy will select backend Pods and assign the backend workload group.
+- For Prod's Fargate-only cluster, Kubernetes `SecurityGroupPolicy` resources will assign the corresponding frontend and backend workload groups. Fargate does not require EC2 Pod ENI enablement, and the policies must preserve required EKS cluster and control-plane communication.
+- Dev, Test, and Prod each own one non-sensitive SSM Parameter Store `String` parameter for the frontend API URL: `/app1/dev/frontend/api-url`, `/app1/test/frontend/api-url`, and `/app1/prod/frontend/api-url` respectively. These parameters are environment infrastructure, not shared infrastructure.
+- Each frontend workload role receives only `ssm:GetParameter` on its exact environment-specific parameter ARN. Backend roles receive no Parameter Store permission from this foundation, and wildcard Parameter Store access is prohibited.
+- Planned security tests verify that each frontend can read only its own environment API URL, cross-environment reads fail, frontend cannot connect to PostgreSQL or access the RDS master secret, backend is network-authorized on TCP/5432, and backend later authenticates to PostgreSQL with IAM database authentication.
+- Kubernetes `SecurityGroupPolicy` objects, VPC CNI changes, and the EKS cluster IAM policy attachment are intentionally deferred and are not implemented by this foundation.

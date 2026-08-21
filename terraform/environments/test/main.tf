@@ -277,3 +277,48 @@ output "rds_security_group_id" {
   description = "ID of the Test RDS security group."
   value       = module.rds.rds_security_group_id
 }
+
+output "frontend_workload_security_group_id" {
+  description = "ID of the Test frontend workload security group."
+  value       = module.rds.frontend_workload_security_group_id
+}
+
+module "frontend_api_url_parameter" {
+  source = "../../modules/parameter-store"
+
+  name        = var.frontend_api_url_parameter.name
+  description = "Test frontend API URL."
+  value       = var.frontend_api_url_parameter.value
+
+  tags = {
+    Application = "App1"
+    Component   = "ApplicationConfiguration"
+  }
+}
+
+data "aws_iam_policy_document" "frontend_api_url_read" {
+  statement {
+    effect    = "Allow"
+    actions   = ["ssm:GetParameter"]
+    resources = [module.frontend_api_url_parameter.parameter_arn]
+  }
+}
+
+resource "aws_iam_role_policy" "frontend_api_url_read" {
+  name = "${var.cluster_name}-frontend-api-url-read"
+  role = var.workload_identity_mode == "pod_identity" ? (
+    module.eks_pod_identity[0].role_names["frontend"]
+  ) : module.eks_irsa[0].role_names["frontend"]
+
+  policy = data.aws_iam_policy_document.frontend_api_url_read.json
+}
+
+output "frontend_api_url_parameter_name" {
+  description = "Name of the Test frontend API URL parameter."
+  value       = module.frontend_api_url_parameter.parameter_name
+}
+
+output "frontend_api_url_parameter_arn" {
+  description = "ARN of the Test frontend API URL parameter."
+  value       = module.frontend_api_url_parameter.parameter_arn
+}

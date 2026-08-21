@@ -30,6 +30,16 @@ resource "aws_security_group" "backend_workload" {
   })
 }
 
+resource "aws_security_group" "frontend_workload" {
+  name        = "${var.identifier}-frontend-workload-sg"
+  description = "Network identity for the ${var.identifier} frontend workload."
+  vpc_id      = var.vpc_id
+
+  tags = merge(var.tags, {
+    Name = "${var.identifier}-frontend-workload-sg"
+  })
+}
+
 resource "aws_security_group" "rds" {
   name        = "${var.identifier}-rds-sg"
   description = "PostgreSQL access to the ${var.identifier} RDS instance."

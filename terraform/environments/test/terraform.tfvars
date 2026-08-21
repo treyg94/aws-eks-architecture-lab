@@ -55,3 +55,8 @@ rds = {
   backup_retention_period = 1
   kms_alias_name          = "app1-test-rds"
 }
+
+frontend_api_url_parameter = {
+  name  = "/app1/test/frontend/api-url"
+  value = "https://api.test.example.invalid"
+}
