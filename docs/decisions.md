@@ -139,13 +139,13 @@ The following choices require explicit design work in later tasks and are not en
 ## Workload network identity and Parameter Store foundation
 
 - Each environment instantiates the reusable `workload-security-groups` module and owns separate, application-named frontend and backend workload security groups tagged as workload networking. The RDS module owns only its database security group and the connectivity rules involving it. Only the backend group is authorized to reach its environment RDS security group on PostgreSQL TCP/5432; the frontend group has no RDS ingress or egress rule and receives no database IAM authentication or master-secret permission.
-- These workload security groups are infrastructure prepared now, but they are not attached to Kubernetes workloads until the later EKS/platform configuration phase.
-- Dev and Test's EC2-backed EKS clusters attach `AmazonEKSVPCResourceController` to the existing cluster IAM role and configure the VPC CNI add-on with `ENABLE_POD_ENI=true`, preparing the AWS-side prerequisites for Security Groups for Pods. The later Kubernetes/platform phase will create `SecurityGroupPolicy` resources that select frontend and backend Pods and assign their corresponding workload groups.
-- For Prod's Fargate-only cluster, Kubernetes `SecurityGroupPolicy` resources will assign the corresponding frontend and backend workload groups. Fargate does not require EC2 Pod ENI enablement, and the policies must preserve required EKS cluster and control-plane communication.
+- Terraform owns creation and output of the workload security groups. Kubernetes owns the `SecurityGroupPolicy` resources that assign those groups to Pods; no Terraform Kubernetes provider is used.
+- Dev and Test's EC2-backed EKS clusters attach `AmazonEKSVPCResourceController` to the existing cluster IAM role and configure the VPC CNI add-on with `ENABLE_POD_ENI=true` and `POD_SECURITY_GROUP_ENFORCING_MODE=standard` for Security Groups for Pods.
+- Prod remains Fargate-only and uses the same Kubernetes-owned policy model without enabling the EC2 Pod ENI configuration. Fargate does not require EC2 Pod ENI enablement, and the policies must preserve required EKS cluster and control-plane communication.
 - Dev, Test, and Prod each own one non-sensitive SSM Parameter Store `String` parameter for the frontend API URL: `/app1/dev/frontend/api-url`, `/app1/test/frontend/api-url`, and `/app1/prod/frontend/api-url` respectively. These parameters are environment infrastructure, not shared infrastructure.
 - Each frontend workload role receives only `ssm:GetParameter` on its exact environment-specific parameter ARN. Backend roles receive no Parameter Store permission from this foundation, and wildcard Parameter Store access is prohibited.
 - Planned security tests verify that each frontend can read only its own environment API URL, cross-environment reads fail, frontend cannot connect to PostgreSQL or access the RDS master secret, backend is network-authorized on TCP/5432, and backend later authenticates to PostgreSQL with IAM database authentication.
-- Kubernetes `SecurityGroupPolicy` objects remain intentionally deferred and are not implemented by this foundation.
+- The `app/frontend` and `app/backend` ServiceAccounts anchor both workload IAM identity and workload network identity. `SecurityGroupPolicy` uses `serviceAccountSelector`, rather than `podSelector`, so every Pod using the selected ServiceAccount receives its corresponding frontend or backend workload security group.
 
 ## Major architecture decision: controlled VPC CNI configuration
 
@@ -154,8 +154,9 @@ The following choices require explicit design work in later tasks and are not en
 - This controlled interface intentionally keeps VPC CNI concepts visible for EKS learning while providing typed inputs, validation, and reviewable environment differences.
 - Dev and Test enable Pod ENI support for future Security Groups for Pods. The EKS module conditionally attaches the EKS-specific `AmazonEKSVPCResourceController` managed policy to their existing cluster roles; it does not attach that policy to node, workload, or Fargate roles.
 - Prod remains Fargate-only, does not enable the EC2 Pod ENI path, and does not receive the VPC Resource Controller policy through this capability.
-- `pod_security_group_enforcing_mode` supports only `standard` or `strict`, but remains unset because that architecture choice has not been made. The module therefore omits `POD_SECURITY_GROUP_ENFORCING_MODE` until a later explicit decision.
-- Prefix delegation, warm-IP tuning, custom networking, and Kubernetes `SecurityGroupPolicy` resources are not enabled by this decision.
+- Dev and Test select `standard` Pod security group enforcing mode. This preserves the primary network interface behavior needed for compatible access to cluster services while applying the selected workload security group to branch-network-interface traffic.
+- Kubernetes manifests live under `kubernetes/app`. The SecurityGroupPolicy template references `frontend_workload_security_group_id` and `backend_workload_security_group_id`; real `sg-...` values must be supplied from the corresponding Terraform environment outputs before applying the manifest.
+- Prefix delegation, warm-IP tuning, and custom networking are not enabled by this decision.
 
 ## Deferred post-deployment database configuration
 
