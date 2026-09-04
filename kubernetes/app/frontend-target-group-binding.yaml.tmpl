@@ -1,0 +1,11 @@
+apiVersion: elbv2.k8s.aws/v1beta1
+kind: TargetGroupBinding
+metadata:
+  name: frontend
+  namespace: app
+spec:
+  serviceRef:
+    name: frontend
+    port: 80
+  targetGroupARN: "${alb_target_group_arn}"
+  targetType: ip
