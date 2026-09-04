@@ -1,0 +1,10 @@
+apiVersion: v2
+name: app1-aws-load-balancer-controller
+description: App1 platform wrapper for AWS Load Balancer Controller
+type: application
+version: 0.1.0
+
+dependencies:
+  - name: aws-load-balancer-controller
+    version: 3.3.0
+    repository: https://aws.github.io/eks-charts

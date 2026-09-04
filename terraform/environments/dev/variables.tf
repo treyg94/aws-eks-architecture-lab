@@ -84,6 +84,11 @@ variable "workload_identity_mode" {
   }
 }
 
+variable "load_balancer_controller_role_name" {
+  description = "Name of the dedicated AWS Load Balancer Controller IAM role."
+  type        = string
+}
+
 variable "vpc_cni" {
   description = "Supported Amazon VPC CNI settings for the environment."
   type = object({

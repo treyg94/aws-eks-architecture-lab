@@ -164,9 +164,17 @@ The following choices require explicit design work in later tasks and are not en
 - Frontend containers request 250 millicores of CPU and 256 MiB of memory and are limited to 500 millicores and 512 MiB. Backend containers request 500 millicores and 512 MiB and are limited to 1 CPU and 1 GiB.
 - Both workloads use explicit placeholder images until application images are built and pushed. No application implementation or runtime configuration is included in this layer.
 - Frontend and backend each have a `ClusterIP` Service. Backend remains private to the cluster; only frontend is intended to receive external ALB traffic.
-- Terraform continues to own the ALB and IP target group. Kubernetes owns a frontend-only `TargetGroupBinding` whose template accepts the environment's Terraform `alb_target_group_arn` output; Kubernetes does not create or manage the target group. The AWS Load Balancer Controller installation remains deferred.
+- Terraform continues to own the ALB and IP target group. Kubernetes owns a frontend-only `TargetGroupBinding` whose template accepts the environment's Terraform `alb_target_group_arn` output; Kubernetes does not create or manage the target group. The controller installation is defined separately in the Kubernetes platform layer.
 - Both Deployment Pod templates include `infrastructure=fargate`. This is an inert organizational label on Dev and Test managed nodes and makes the same manifests match Prod's existing `app-fargate` profile without changing Prod's Fargate architecture.
-- Ingress, autoscaling, probes, NetworkPolicy, Helm, ConfigMaps, Secrets, and additional application resources remain deferred.
+- Ingress, autoscaling, probes, NetworkPolicy, ConfigMaps, Secrets, and additional application resources remain deferred.
+
+## AWS Load Balancer Controller platform foundation
+
+- AWS Load Balancer Controller is installed through a small wrapper Helm chart in `kubernetes/platform/aws-load-balancer-controller`, pinned to upstream chart version `3.3.0`. Helm owns the controller deployment and its dedicated `kube-system/aws-load-balancer-controller` ServiceAccount; the dependency chart is configured with `serviceAccount.create=false` so it does not create a conflicting identity.
+- The controller uses a dedicated platform-operational IAM role and does not reuse frontend or backend workload identities. The role remains part of the EKS/platform service layer and receives the official controller `v3.3.0` IAM policy required for AWS API operations.
+- Dev and Test associate the controller ServiceAccount with its role through EKS Pod Identity. Prod remains Fargate-only and uses IRSA; the wrapper chart adds the role annotation only when the rendered identity mode is `irsa`, and a dedicated Fargate profile selects the controller Pods in `kube-system`.
+- The reusable Helm values template accepts the existing EKS cluster name, VPC ID, controller role ARN, and identity mode, and fixes the region to `us-east-1`. No static AWS credentials are used.
+- Terraform continues to own the existing ALBs and target groups. The controller reconciles the frontend-only Kubernetes `TargetGroupBinding` and registers targets with the Terraform-owned target group; no Ingress or `LoadBalancer` Service is introduced, so this layer does not ask the controller to create another load balancer.
 
 ## Deferred post-deployment database configuration
 
