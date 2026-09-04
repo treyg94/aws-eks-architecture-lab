@@ -6,6 +6,7 @@ enable_managed_nodes                = false
 enable_fargate                      = true
 workload_identity_mode              = "irsa"
 workload_security_group_name_prefix = "app1-prod"
+load_balancer_controller_role_name  = "app1-prod-aws-load-balancer-controller"
 
 vpc_cni = {
   enable_pod_eni = false
@@ -44,6 +45,17 @@ fargate_profiles = [
         namespace = "kube-system"
         labels = {
           k8s-app = "kube-dns"
+        }
+      }
+    ]
+  },
+  {
+    name = "aws-load-balancer-controller-fargate"
+    selectors = [
+      {
+        namespace = "kube-system"
+        labels = {
+          "app.kubernetes.io/name" = "aws-load-balancer-controller"
         }
       }
     ]

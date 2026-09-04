@@ -6,6 +6,7 @@ enable_managed_nodes                = true
 enable_fargate                      = false
 workload_identity_mode              = "pod_identity"
 workload_security_group_name_prefix = "app1-test"
+load_balancer_controller_role_name  = "app1-test-aws-load-balancer-controller"
 
 vpc_cni = {
   enable_pod_eni                    = true

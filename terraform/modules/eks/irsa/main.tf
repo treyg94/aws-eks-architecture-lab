@@ -1,5 +1,15 @@
 locals {
   oidc_provider_hostpath = replace(var.oidc_issuer_url, "https://", "")
+  identities = merge(
+    {
+      for name, identity in var.identities : name => {
+        namespace            = var.namespace
+        service_account_name = identity.service_account_name
+        role_name            = identity.role_name
+      }
+    },
+    var.additional_identities,
+  )
 }
 
 resource "aws_iam_openid_connect_provider" "this" {
@@ -9,7 +19,7 @@ resource "aws_iam_openid_connect_provider" "this" {
 }
 
 data "aws_iam_policy_document" "assume_role" {
-  for_each = var.identities
+  for_each = local.identities
 
   statement {
     effect  = "Allow"
@@ -29,13 +39,13 @@ data "aws_iam_policy_document" "assume_role" {
     condition {
       test     = "StringEquals"
       variable = "${local.oidc_provider_hostpath}:sub"
-      values   = ["system:serviceaccount:${var.namespace}:${each.value.service_account_name}"]
+      values   = ["system:serviceaccount:${each.value.namespace}:${each.value.service_account_name}"]
     }
   }
 }
 
 resource "aws_iam_role" "this" {
-  for_each = var.identities
+  for_each = local.identities
 
   name               = each.value.role_name
   assume_role_policy = data.aws_iam_policy_document.assume_role[each.key].json

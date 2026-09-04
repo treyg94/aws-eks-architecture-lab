@@ -1,0 +1,11 @@
+controllerServiceAccount:
+  identityMode: "${controller_identity_mode}"
+  roleArn: "${aws_load_balancer_controller_role_arn}"
+
+aws-load-balancer-controller:
+  clusterName: "${eks_cluster_name}"
+  region: us-east-1
+  vpcId: "${vpc_id}"
+  serviceAccount:
+    create: false
+    name: aws-load-balancer-controller

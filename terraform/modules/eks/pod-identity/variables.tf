@@ -9,11 +9,21 @@ variable "namespace" {
 }
 
 variable "identities" {
-  description = "Workload identities keyed by a stable logical name."
+  description = "Identities in the default namespace, keyed by a stable logical name."
   type = map(object({
     service_account_name = string
     role_name            = string
   }))
+}
+
+variable "additional_identities" {
+  description = "Additional identities that may use namespaces other than the default namespace."
+  type = map(object({
+    namespace            = string
+    service_account_name = string
+    role_name            = string
+  }))
+  default = {}
 }
 
 variable "tags" {

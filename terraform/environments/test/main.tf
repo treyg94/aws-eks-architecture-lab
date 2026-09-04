@@ -126,6 +126,14 @@ module "eks_pod_identity" {
   namespace    = var.workload_identity.namespace
   identities   = var.workload_identity.identities
 
+  additional_identities = {
+    aws_load_balancer_controller = {
+      namespace            = "kube-system"
+      service_account_name = "aws-load-balancer-controller"
+      role_name            = var.load_balancer_controller_role_name
+    }
+  }
+
   tags = local.eks_tags
 
   depends_on = [module.eks_cluster]
@@ -139,7 +147,33 @@ module "eks_irsa" {
   namespace       = var.workload_identity.namespace
   identities      = var.workload_identity.identities
 
+  additional_identities = {
+    aws_load_balancer_controller = {
+      namespace            = "kube-system"
+      service_account_name = "aws-load-balancer-controller"
+      role_name            = var.load_balancer_controller_role_name
+    }
+  }
+
   tags = local.eks_tags
+}
+
+module "aws_load_balancer_controller_iam" {
+  source = "../../modules/eks/aws-load-balancer-controller"
+
+  policy_name = "${var.cluster_name}-aws-load-balancer-controller"
+  role_name = var.workload_identity_mode == "pod_identity" ? (
+    module.eks_pod_identity[0].role_names["aws_load_balancer_controller"]
+  ) : module.eks_irsa[0].role_names["aws_load_balancer_controller"]
+
+  tags = local.eks_tags
+}
+
+output "aws_load_balancer_controller_role_arn" {
+  description = "ARN of the Test AWS Load Balancer Controller IAM role."
+  value = var.workload_identity_mode == "pod_identity" ? (
+    module.eks_pod_identity[0].role_arns["aws_load_balancer_controller"]
+  ) : module.eks_irsa[0].role_arns["aws_load_balancer_controller"]
 }
 
 output "eks_cluster_name" {
