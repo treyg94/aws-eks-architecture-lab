@@ -158,6 +158,16 @@ The following choices require explicit design work in later tasks and are not en
 - Kubernetes manifests live under `kubernetes/app`. The SecurityGroupPolicy template references `frontend_workload_security_group_id` and `backend_workload_security_group_id`; real `sg-...` values must be supplied from the corresponding Terraform environment outputs before applying the manifest.
 - Prefix delegation, warm-IP tuning, and custom networking are not enabled by this decision.
 
+## Kubernetes application foundation
+
+- The `app` namespace runs separate frontend and backend Deployments with two replicas each. Both use their existing same-named ServiceAccounts so workload IAM and network identities remain anchored to the ServiceAccount boundary.
+- Frontend containers request 250 millicores of CPU and 256 MiB of memory and are limited to 500 millicores and 512 MiB. Backend containers request 500 millicores and 512 MiB and are limited to 1 CPU and 1 GiB.
+- Both workloads use explicit placeholder images until application images are built and pushed. No application implementation or runtime configuration is included in this layer.
+- Frontend and backend each have a `ClusterIP` Service. Backend remains private to the cluster; only frontend is intended to receive external ALB traffic.
+- Terraform continues to own the ALB and IP target group. Kubernetes owns a frontend-only `TargetGroupBinding` whose template accepts the environment's Terraform `alb_target_group_arn` output; Kubernetes does not create or manage the target group. The AWS Load Balancer Controller installation remains deferred.
+- Both Deployment Pod templates include `infrastructure=fargate`. This is an inert organizational label on Dev and Test managed nodes and makes the same manifests match Prod's existing `app-fargate` profile without changing Prod's Fargate architecture.
+- Ingress, autoscaling, probes, NetworkPolicy, Helm, ConfigMaps, Secrets, and additional application resources remain deferred.
+
 ## Deferred post-deployment database configuration
 
 The PostgreSQL application role is intentionally not created as part of the AWS Terraform buildout.
