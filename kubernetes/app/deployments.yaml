@@ -17,7 +17,7 @@ spec:
       serviceAccountName: frontend
       containers:
         - name: frontend
-          image: placeholder.invalid/app1/frontend:latest
+          image: 203156341699.dkr.ecr.us-east-1.amazonaws.com/app1:frontend-v1
           ports:
             - name: http
               containerPort: 80
@@ -49,10 +49,23 @@ spec:
       serviceAccountName: backend
       containers:
         - name: backend
-          image: placeholder.invalid/app1/backend:latest
+          image: 203156341699.dkr.ecr.us-east-1.amazonaws.com/app1:backend-v1
+          env:
+            - name: DB_AUTH_MODE
+              value: iam
+            - name: DB_HOST
+              value: app1-dev-postgres.cpwsqbojybld.us-east-1.rds.amazonaws.com
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: app1
+            - name: DB_USER
+              value: app1_backend
+            - name: AWS_REGION
+              value: us-east-1
           ports:
             - name: http
-              containerPort: 80
+              containerPort: 8080
               protocol: TCP
           resources:
             requests:
