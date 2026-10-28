@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>App1 EKS Lab</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="eyebrow">AWS / EKS architecture lab</p>
+        <h1>App1 EKS Lab</h1>
+        <p>A small end-to-end check from Nginx to FastAPI to PostgreSQL.</p>
+      </header>
+
+      <section class="status-grid" aria-label="Application status">
+        <article class="status-card">
+          <h2>Frontend</h2>
+          <p id="frontend-status" class="status healthy">Healthy</p>
+        </article>
+        <article class="status-card">
+          <h2>Backend</h2>
+          <p id="backend-status" class="status pending">Checking…</p>
+          <p>Host: <code id="backend-hostname">unknown</code></p>
+        </article>
+        <article class="status-card">
+          <h2>Database</h2>
+          <p id="database-status" class="status pending">Checking…</p>
+          <p>Check count: <strong id="database-count">—</strong></p>
+        </article>
+      </section>
+
+      <button id="run-check" type="button">Run Database Check</button>
+      <p id="message" role="status" aria-live="polite"></p>
+    </main>
+  </body>
+</html>
