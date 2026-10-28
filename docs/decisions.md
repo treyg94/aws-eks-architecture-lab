@@ -108,10 +108,10 @@ The following choices require explicit design work in later tasks and are not en
 - The bootstrap root creates one S3 state bucket and one customer-managed KMS key with a friendly alias. The bucket name combines a configurable project prefix with the current AWS account ID and region without committing an account identifier.
 - Bucket versioning is enabled, all four S3 Block Public Access controls are enabled, default encryption uses the customer-managed KMS key, and the bucket policy denies requests that do not use TLS.
 - The bucket and KMS key use Terraform `prevent_destroy`; the bucket does not allow force deletion. KMS rotation is enabled and its deletion window is 30 days.
-- After a later explicit migration, the S3 bucket will become the authoritative state location for Dev, Test, Prod, and shared infrastructure.
-- Planned state keys are `shared/dns-acm/terraform.tfstate`, `dev/terraform.tfstate`, `test/terraform.tfstate`, and `prod/terraform.tfstate`.
-- Migrated roots will use S3 native state locking with `use_lockfile = true`. No DynamoDB locking table is created or planned.
-- This feature does not migrate state or add backend blocks to any existing Terraform root.
+- Dev and the shared DNS/ACM and ECR roots configure the S3 bucket as their authoritative remote state location. Their separate keys are `environments/dev/terraform.tfstate`, `shared/dns-acm/terraform.tfstate`, and `shared/ecr/terraform.tfstate`.
+- These configured roots use S3 native state locking with `use_lockfile = true`. No DynamoDB locking table is created or planned.
+- Test and Prod remain unconfigured for remote state until their later deployment phases and will receive separate state keys when enabled.
+- The bootstrap root intentionally remains on local state and must never use the backend that it creates.
 
 ## Shared ECR foundation
 
