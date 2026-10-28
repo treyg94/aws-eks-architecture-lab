@@ -168,6 +168,14 @@ The following choices require explicit design work in later tasks and are not en
 - Both Deployment Pod templates include `infrastructure=fargate`. This is an inert organizational label on Dev and Test managed nodes and makes the same manifests match Prod's existing `app-fargate` profile without changing Prod's Fargate architecture.
 - Ingress, autoscaling, probes, NetworkPolicy, ConfigMaps, Secrets, and additional application resources remain deferred.
 
+## Functional application support
+
+- App1 uses a lightweight Nginx static frontend and a small FastAPI backend to make the infrastructure lab's browser-to-database path observable without introducing a frontend framework.
+- Nginx serves the browser on port 80 and proxies `/api/*` to the internal backend. PostgreSQL provides a minimal timestamped check table for functional end-to-end validation.
+- The local Docker Compose environment uses a local-only PostgreSQL username and password. Those credentials are development conveniences and are not an EKS authentication design.
+- In EKS, the backend uses its workload identity to generate short-lived RDS IAM database authentication tokens and connects to PostgreSQL over SSL. Static database passwords are not used by the application workload.
+- Kubernetes image references remain placeholders until the later ECR image build and publication task; this application source does not change the existing deployment manifests.
+
 ## AWS Load Balancer Controller platform foundation
 
 - AWS Load Balancer Controller is installed through a small wrapper Helm chart in `kubernetes/platform/aws-load-balancer-controller`, pinned to upstream chart version `3.3.0`. Helm owns the controller deployment and its dedicated `kube-system/aws-load-balancer-controller` ServiceAccount; the dependency chart is configured with `serviceAccount.create=false` so it does not create a conflicting identity.
