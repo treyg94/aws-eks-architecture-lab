@@ -24,6 +24,6 @@ spec:
     app.kubernetes.io/name: backend
   ports:
     - name: http
-      port: 80
+      port: 8080
       targetPort: http
       protocol: TCP
